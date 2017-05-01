@@ -8,6 +8,14 @@ namespace Drupal\yaml_content\ContentLoader;
 interface ContentLoaderInterface {
 
   /**
+   * Set a path prefix for all content files to be loaded from.
+   *
+   * @param string $path
+   *   The path for where all content files will be loaded from.
+   */
+  public function setContentPath($path);
+
+  /**
    * Parse the given yaml content file into an array.
    *
    * @param string $content_file

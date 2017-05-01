@@ -53,6 +53,13 @@ class ContentLoader implements ContentLoaderInterface {
   protected $existenceCheck;
 
   /**
+   * The directory path where content and assets may be found for import.
+   *
+   * @var string
+   */
+  protected $path;
+
+  /**
    * ContentLoader constructor.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
@@ -60,7 +67,7 @@ class ContentLoader implements ContentLoaderInterface {
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $module_handler
    *   Drupal module handler service.
    *
-   * @todo Register via services.
+   * @todo Fetch parser via dependency injection.
    */
   public function __construct(EntityTypeManagerInterface $entity_type_manager, ModuleHandlerInterface $module_handler) {
     $this->parser = new Parser();
@@ -69,10 +76,7 @@ class ContentLoader implements ContentLoaderInterface {
   }
 
   /**
-   * Set a path prefix for all content files to be loaded from.
-   *
-   * @param string $path
-   *   The path for where all content files will be loaded from.
+   * {@inheritdoc}
    */
   public function setContentPath($path) {
     $this->path = $path;
@@ -102,8 +106,8 @@ class ContentLoader implements ContentLoaderInterface {
    * {@inheritdoc}
    */
   public function parseContent($content_file) {
-    $this->contentFile = $this->path . '/' . $content_file;
-    $this->parsedContent = $this->parser->parse(file_get_contents($this->contentFile));
+    $file = $this->path . '/content/' . $content_file;
+    $this->parsedContent = $this->parser->parse(file_get_contents($file));
 
     // Never leave this as null, even on a failed parsing process.
     // @todo Output a warning for empty content files or failed parsing.
