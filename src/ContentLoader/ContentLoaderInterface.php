@@ -53,4 +53,3 @@ interface ContentLoaderInterface {
   public function buildEntity($entity_type, array $content_data);
 
 }
-

@@ -245,6 +245,7 @@ class ContentLoader implements ContentLoaderInterface {
         // Test if this is a paragraph field.
         $target_type = $field->getFieldDefinition()->getSetting('target_type');
         if ($target_type == 'paragraph') {
+          /** @var \Drupal\Core\Entity\EntityInterface[] $entities */
           $entities = $field->referencedEntities();
           foreach ($entities as $entity) {
             $entity->delete();
@@ -322,7 +323,7 @@ class ContentLoader implements ContentLoaderInterface {
       $dependency = $field_data['#process']['dependency'];
       $process_method = $callback_type . 'EntityLoad';
       if ($dependency) {
-        $process_dependency = new ContentLoader($this->entityTypeManager);
+        $process_dependency = new ContentLoader($this->entityTypeManager, $this->moduleHandler);
         $process_dependency->setContentPath($this->path);
         $process_dependency->loadContent($dependency, $this->existenceCheck());
       }
@@ -510,4 +511,3 @@ class ContentLoader implements ContentLoaderInterface {
   }
 
 }
-

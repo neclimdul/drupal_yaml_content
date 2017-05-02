@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file
  * Drush commands for the yaml_content module.
@@ -105,7 +106,7 @@ function drush_yaml_content_import_module($module, $file = NULL) {
  * Import specified yaml content file(s) from a designated profile.
  *
  * @param string $profile
- *   The prifle to look for content files within.
+ *   The profile to look for content files within.
  *
  *   This command assumes files will be contained within a `content/` directory
  *   at the top of the module's main directory. Any files within matching the
