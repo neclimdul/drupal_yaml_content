@@ -431,39 +431,37 @@ class ContentLoader implements ContentLoaderInterface {
    * @see ContentLoader::preprocessFieldData()
    */
   protected function fileEntityLoad($field, array &$field_data, $entity_type, array $filter_params) {
-    if ($filter_params['type'] == 'module') {
-      $filename = $filter_params['filename'];
-      $directory = '/data_files/';
-      // If the entity type is an image, look in to the /images directory.
-      if ($entity_type == 'image') {
-        $directory = '/images/';
-      }
-      $output = file_get_contents($this->path . $directory . $filename);
-      if ($output !== FALSE) {
-        // Save the file data. Do not overwrite files if they already exist.
-        $file = file_save_data($output, 'public://' . $filename, FILE_EXISTS_RENAME);
-        // Use the newly created file id as the value.
-        $field_data['target_id'] = $file->id();
+    $filename = $filter_params['filename'];
+    $directory = '/data_files/';
+    // If the entity type is an image, look in to the /images directory.
+    if ($entity_type == 'image') {
+      $directory = '/images/';
+    }
+    $output = file_get_contents($this->path . $directory . $filename);
+    if ($output !== FALSE) {
+      // Save the file data. Do not overwrite files if they already exist.
+      $file = file_save_data($output, 'public://' . $filename, FILE_EXISTS_RENAME);
+      // Use the newly created file id as the value.
+      $field_data['target_id'] = $file->id();
 
-        // Remove process data to avoid issues when setting the value.
-        unset($field_data['#process']);
+      // Remove process data to avoid issues when setting the value.
+      unset($field_data['#process']);
 
-        return $file->id();
+      return $file->id();
+    }
+    else {
+      // Build parameter output description for error message.
+      $error_params = [
+        '[',
+        '  "entity_type" => ' . $entity_type . ',',
+      ];
+      foreach ($filter_params as $key => $value) {
+        $error_params[] = sprintf("  '%s' => '%s',", $key, $value);
       }
-      else {
-        // Build parameter output description for error message.
-        $error_params = [
-          '[',
-          '  "entity_type" => ' . $entity_type . ',',
-        ];
-        foreach ($filter_params as $key => $value) {
-          $error_params[] = sprintf("  '%s' => '%s',", $key, $value);
-        }
-        $error_params[] = ']';
-        $param_output = implode("\n", $error_params);
+      $error_params[] = ']';
+      $param_output = implode("\n", $error_params);
 
-        throw new MissingDataException(__CLASS__ . ': Unable to process file content: ' . $param_output);
-      }
+      throw new MissingDataException(__CLASS__ . ': Unable to process file content: ' . $param_output);
     }
   }
 
