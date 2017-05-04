@@ -32,3 +32,18 @@ custom Drush commands:
 - `drush yaml-content-import <directory>`
 - `drush yaml-content-import-module <module_name>`
 - `drush yaml-content-import-profile <profile_name>`
+
+-- EXAMPLES --
+
+For some brief content examples, have a look in the `content` folder of this
+module. In that folder there are example import files with inline commentary
+describing how values are set and the data is structured. These content files
+may also be imported into a site with the matching architecture for a demonstration.
+In the case of these files, any site installed using the Standard install profile
+should have the required content types and field structure to support the demo
+content.
+
+To run the import, ensure the yaml_content module is enabled and run the following
+command through Drush:
+
+    drush yaml-content-import-module yaml_content
