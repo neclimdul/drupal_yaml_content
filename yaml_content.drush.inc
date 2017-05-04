@@ -172,11 +172,11 @@ function drush_yaml_content_discover_files($path, $mask = '/.*\.content\.yml/') 
 function _drush_yaml_content_import_files(ContentLoaderInterface $loader, array $files) {
   // @todo Verify files before loading for import.
   foreach ($files as $filename => $file) {
-    drush_print_r(dt('Importing content: @file', [
+    drush_print(dt('Importing content: @file', [
       '@file' => $filename,
     ]));
     $loaded = $loader->loadContent($filename);
-    drush_print_r(dt('Imported @count items', [
+    drush_print(dt('Imported @count items', [
       '@count' => count($loaded),
     ]));
   }
