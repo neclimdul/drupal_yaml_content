@@ -320,9 +320,9 @@ class ContentLoader implements ContentLoaderInterface {
     // Check for a callback processor defined at the value level.
     if (isset($field_data['#process']) && isset($field_data['#process']['callback'])) {
       $callback_type = $field_data['#process']['callback'];
-      $dependency = $field_data['#process']['dependency'];
       $process_method = $callback_type . 'EntityLoad';
-      if ($dependency) {
+      if (isset($field_data['#process']['dependency'])) {
+        $dependency = $field_data['#process']['dependency'];
         $process_dependency = new ContentLoader($this->entityTypeManager, $this->moduleHandler);
         $process_dependency->setContentPath($this->path);
         $process_dependency->loadContent($dependency, $this->existenceCheck());
