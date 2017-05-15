@@ -5,6 +5,7 @@ namespace Drupal\Tests\yaml_content\Unit;
 use Drupal\Tests\UnitTestCase;
 use org\bovigo\vfs\vfsStream;
 use Drupal\yaml_content\ContentLoader\ContentLoader;
+use org\bovigo\vfs\vfsStreamWrapper;
 
 /**
  * @coversDefaultClass \Drupal\yaml_content\ContentLoader\ContentLoader
@@ -120,9 +121,7 @@ class ContentLoaderTest extends UnitTestCase {
     // @todo Test if $contentPath is not set
     // @todo Confirm `$path/content/$content_file` is loaded
     // @todo Confirm `/$content_file` is not loaded
-    // @todo Handle missing file
     // @todo Handle parse failure
-    // @todo Handle empty file
     // @todo Test no array at top level of content
     // @todo Confirm array structure loaded
 
@@ -131,9 +130,18 @@ class ContentLoaderTest extends UnitTestCase {
 
   /**
    * Tests behavior when a content file is unavailable.
+   *
+   * @expectedException \PHPUnit_Framework_Error_Warning
    */
   public function testMissingContentFile() {
-    $this->markTestIncomplete();
+    $test_file = 'missing.content.yml';
+
+    // Confirm the file is not actually present.
+    $this->assertFalse($this->root->hasChild('content/missing.content.yml'));
+
+    // Prepare and parse the missing content file.
+    $this->contentLoader->setContentPath($this->root->url());
+    $parsed_content = $this->contentLoader->parseContent($test_file);
   }
 
   /**
