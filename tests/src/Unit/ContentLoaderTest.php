@@ -162,4 +162,32 @@ class ContentLoaderTest extends UnitTestCase {
     $this->assertArrayEquals([], $parsed_content, 'Empty content files return an empty array.');
   }
 
+  public function testLoadContent() {
+    $this->markTestIncomplete();
+  }
+
+  public function testBuildEntity() {
+    $this->markTestIncomplete();
+  }
+
+  public function testPopulateField() {
+    $this->markTestIncomplete();
+  }
+
+  public function testPreprocessFieldData() {
+    $this->markTestIncomplete();
+  }
+
+  public function testReferenceEntityLoad() {
+    $this->markTestIncomplete();
+  }
+
+  public function testFileEntityLoad() {
+    $this->markTestIncomplete();
+  }
+
+  public function testEntityExists() {
+    $this->markTestIncomplete();
+  }
+
 }
