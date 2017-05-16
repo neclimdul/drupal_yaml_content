@@ -14,18 +14,25 @@ use org\bovigo\vfs\vfsStreamWrapper;
 class ContentLoaderTest extends UnitTestCase {
 
   /**
+   * The mocked ConfigEntityStorage service.
+   *
+   * @var \PHPUnit_Framework_MockObject_MockObject
+   */
+  protected $configStorage;
+
+  /**
    * The mocked EntityTypeManager service.
    *
    * @var \PHPUnit_Framework_MockObject_MockObject
    */
-  protected $entityTypeManagerMock;
+  protected $entityTypeManager;
 
   /**
    * The mocked ModuleHandler service.
    *
    * @var \PHPUnit_Framework_MockObject_MockObject
    */
-  protected $moduleHandlerMock;
+  protected $moduleHandler;
 
   /**
    * The prepared root directory of the virtual file system.
@@ -42,17 +49,45 @@ class ContentLoaderTest extends UnitTestCase {
   protected $contentLoader;
 
   /**
+   * Prepare an abstract Entity mock object.
+   *
+   * @return \PHPUnit_Framework_MockObject_MockObject
+   *   A mock entity object.
+   *
+   * @see \Drupal\Tests\views\Unit\Plugin\area\EntityTest::setUp()
+   */
+  protected function getEntityMock() {
+    $mock_entity = $this->getMockForAbstractClass('Drupal\Core\Entity\Entity', [], '', FALSE, TRUE, TRUE, ['bundle']);
+    $mock_entity->expects($this->any())
+      ->method('bundle')
+      ->will($this->returnValue('test_bundle'));
+
+    return $mock_entity;
+  }
+
+  /**
    * Prepare a mock EntityTypeManager service object for testing.
    *
    * @return \PHPUnit_Framework_MockObject_MockObject
    *   A mock EntityTypeManager service.
    */
-  protected function getMockEntityTypeManager() {
-    $mock = $this->getMockBuilder('Drupal\Core\Entity\EntityTypeManager')
+  protected function getEntityTypeManagerMock() {
+    // Mock the entity storage service.
+    $this->configStorage = $this->getMockBuilder('\Drupal\Core\Config\Entity\ConfigEntityStorage')
       ->disableOriginalConstructor()
       ->getMock();
 
-    return $mock;
+    // Mock the entity type manager service.
+    $this->entityTypeManager = $this->getMockBuilder('Drupal\Core\Entity\EntityTypeManager')
+      ->disableOriginalConstructor()
+      ->getMock();
+
+    // Stub the return for the entity storage handler.
+    $this->entityTypeManager
+      ->method('getStorage')
+      ->willReturn($this->configStorage);
+
+    return $this->entityTypeManager;
   }
 
   /**
@@ -61,12 +96,12 @@ class ContentLoaderTest extends UnitTestCase {
    * @return \PHPUnit_Framework_MockObject_MockObject
    *   A mock ModuleHandler service.
    */
-  protected function getMockModuleHandler() {
-    $mock = $this->getMockBuilder('Drupal\Core\Extension\ModuleHandlerInterface')
+  protected function getModuleHandlerMock() {
+    $this->moduleHandler = $this->getMockBuilder('Drupal\Core\Extension\ModuleHandlerInterface')
       ->disableOriginalConstructor()
       ->getMock();
 
-    return $mock;
+    return $this->moduleHandler;
   }
 
   /**
@@ -76,11 +111,15 @@ class ContentLoaderTest extends UnitTestCase {
    *   The name of the test file to be created.
    * @param string $contents
    *   The contents to populate into the test file.
+   *
+   * @return $this
    */
   protected function createContentTestFile($filename, $contents) {
     vfsStream::newFile($filename)
       ->withContent($contents)
       ->at($this->root->getChild('content'));
+
+    return $this;
   }
 
   /**
@@ -95,11 +134,11 @@ class ContentLoaderTest extends UnitTestCase {
       ->at($this->root);
 
     // Mock the EntityTypeManager.
-    $this->entityTypeManagerMock = $this->getMockEntityTypeManager();
+    $this->entityTypeManager = $this->getEntityTypeManagerMock();
     // Mock the ModuleHandler.
-    $this->moduleHandlerMock = $this->getMockModuleHandler();
+    $this->moduleHandler = $this->getModuleHandlerMock();
 
-    $this->contentLoader = new ContentLoader($this->entityTypeManagerMock, $this->moduleHandlerMock);
+    $this->contentLoader = new ContentLoader($this->entityTypeManager, $this->moduleHandler);
   }
 
   /**
