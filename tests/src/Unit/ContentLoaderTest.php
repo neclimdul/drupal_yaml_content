@@ -108,8 +108,8 @@ class ContentLoaderTest extends UnitTestCase {
    * @see \Drupal\yaml_content\ContentLoader\ContentLoader::setContentPath()
    */
   public function testSetPath() {
-    // @todo Confirm path property is set.
-    $this->markTestIncomplete();
+    $this->contentLoader->setContentPath($this->root->url());
+    $this->assertAttributeEquals($this->root->url(), 'path', $this->contentLoader);
   }
 
   /**
