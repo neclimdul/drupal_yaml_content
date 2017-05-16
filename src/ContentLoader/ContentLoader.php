@@ -375,16 +375,8 @@ class ContentLoader implements ContentLoaderInterface {
     $entity_ids = $query->execute();
 
     if (empty($entity_ids)) {
-      if ($entity_type == 'taxonomy_term') {
-        $term = Term::create($filter_params);
-        $term->save();
-        $entity_ids = [$term->id()];
-      }
-      elseif ($entity_type == 'node') {
-        $node = Node::create($filter_params);
-        $node->save();
-        $entity_ids = [$node->id()];
-      }
+      $entity = $this->entityTypeManager->getStorage($entity_type)->create();
+      $entity_ids = [$entity->id()];
     }
 
     if (empty($entity_ids)) {
