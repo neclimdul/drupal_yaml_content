@@ -205,8 +205,108 @@ class ContentLoaderTest extends UnitTestCase {
     $this->markTestIncomplete();
   }
 
-  public function testBuildEntity() {
+  /**
+   * Setup test fixtures for `buildEntity()` tests.
+   */
+  public function setupBuildEntityTests() {
+    // Methods to be stubbed in the mock.
+    // All methods except the ones excluded in the array below will be stubbed.
+    $stub_methods = array_diff(get_class_methods(ContentLoader::class), [
+      'buildEntity',
+      'categorizeEntityFieldsAndProperties',
+    ]);
+
+    $this->contentLoader = $this->getMockBuilder(ContentLoader::class)
+      ->setConstructorArgs([
+        $this->getEntityTypeManagerMock(),
+        $this->getModuleHandlerMock(),
+      ])
+      ->setMethods($stub_methods)
+      ->getMock();
+  }
+
+  /**
+   * Tests general functionality of the `buildEntity()` method.
+   *
+   * @dataProvider contentDataProvider
+   *
+   * @see \Drupal\Tests\yaml_content\Unit\ContentLoaderTest::setupBuildEntityTests()
+   */
+  public function testBuildEntity($entity_type, $test_content) {
+    $this->setupBuildEntityTests();
+
     $this->markTestIncomplete();
+  }
+
+  /**
+   * Tests that entityExists() is never called if the flag is disabled.
+   *
+   * @dataProvider contentDataProvider
+   *
+   * @see \Drupal\Tests\yaml_content\Unit\ContentLoaderTest::setupBuildEntityTests()
+   */
+  public function testBuildEntityExistenceCheckDoesntCallEntityExists($entity_type, $test_content) {
+    $this->setupBuildEntityTests();
+
+    // Confirm the scenario actually ran as expected.
+    $this->contentLoader
+      ->expects($this->once())
+      ->method('existenceCheck')
+      ->willReturn(FALSE);
+
+    // Confirm `entityExists()` was never called.
+    $this->contentLoader
+      ->expects($this->never())
+      ->method('entityExists');
+
+    $this->contentLoader->buildEntity($entity_type, $test_content);
+  }
+
+  /**
+   * Tests that entityExists() is correctly called if the flag is enabled.
+   *
+   * @dataProvider contentDataProvider
+   *
+   * @see \Drupal\Tests\yaml_content\Unit\ContentLoaderTest::setupBuildEntityTests()
+   */
+  public function testBuildEntityExistenceCheckCallsEntityExists($entity_type, $test_content) {
+    $this->setupBuildEntityTests();
+
+    $this->contentLoader
+      ->setExistenceCheck(TRUE);
+
+    $this->configStorage
+      ->expects($this->once())
+      ->method('entityExists');
+
+    $this->contentLoader->buildEntity($entity_type, $test_content);
+  }
+
+  /**
+   * Data provider function to test various content scenarios.
+   *
+   * @return array
+   *   An array of content testing arguments:
+   *   - string Entity Type
+   *   - array Content data structure
+   */
+  public function contentDataProvider() {
+    $test_content['basic_node'] = [
+      'entity' => 'node',
+      'status' => 1,
+      'title' => 'Test Title',
+      'field_rich_text' => [
+        'value' => 'Lorem Ipsum',
+        'format' => 'full_html',
+      ],
+      'field_simple_value' => [
+        'value' => 'simple',
+      ],
+    ];
+
+    return [
+      ['node', $test_content['basic_node']],
+    ];
   }
 
   public function testPopulateField() {
