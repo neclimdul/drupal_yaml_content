@@ -97,9 +97,13 @@ class ContentLoader implements ContentLoaderInterface {
    *
    * @param bool $existence_check
    *   The true/false value of existence check.
+   *
+   * @return $this
    */
   public function setExistenceCheck($existence_check) {
     $this->existenceCheck = $existence_check;
+
+    return $this;
   }
 
   /**
@@ -141,6 +145,42 @@ class ContentLoader implements ContentLoaderInterface {
   }
 
   /**
+   * Identify entity field and property keys.
+   *
+   * @param array $content_data
+   *   The array of content data to be parsed.
+   *
+   * @return array
+   *   An associative array of entity keys and properties. The top level contains
+   *   the keys:
+   *   - `fields`
+   *   - `properties`
+   *
+   *   The second level contains the content data for each item keyed by the
+   *   field or property name.
+   *
+   * @todo Use entity type information to more accurately identify attributes.
+   */
+  protected function categorizeEntityFieldsAndProperties(array $content_data) {
+    // Identify entity fields and properties.
+    $fields = [];
+    $properties = [];
+    foreach (array_keys($content_data) as $key) {
+      if (strpos($key, 'field') === 0) {
+        $fields[$key] = $content_data[$key];
+      }
+      else {
+        $properties[$key] = $content_data[$key];
+      }
+    }
+
+    return [
+      'fields' => $fields,
+      'properties' => $properties,
+    ];
+  }
+
+  /**
    * Build an entity from the provided content data.
    *
    * @param string $entity_type
@@ -157,16 +197,9 @@ class ContentLoader implements ContentLoaderInterface {
 
     // Verify required content data.
     // Parse properties for creation and fields for processing.
-    $properties = [];
-    $fields = [];
-    foreach (array_keys($content_data) as $key) {
-      if (strpos($key, 'field') === 0) {
-        $fields[$key] = $content_data[$key];
-      }
-      else {
-        $properties[$key] = $content_data[$key];
-      }
-    };
+    $attributes = $this->categorizeEntityFieldsAndProperties($content_data);
+    $fields = $attributes['fields'];
+    $properties = $attributes['properties'];
 
     // If it is a 'user' entity, append a timestamp to make the username unique.
     if ($entity_type == 'user' && isset($properties['name'][0]['value'])) {
