@@ -221,8 +221,8 @@ class ContentLoader implements ContentLoaderInterface {
     // Populate fields.
     foreach ($fields as $field_name => $field_data) {
       try {
-        if ($entity->$field_name) {
-          $this->populateField($entity->$field_name, $field_data);
+        if ($entity->hasField($field_name)) {
+          $this->populateField($entity->get($field_name), $field_data);
         }
         else {
           throw new FieldException('Undefined field: ' . $field_name);
