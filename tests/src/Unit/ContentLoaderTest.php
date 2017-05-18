@@ -325,8 +325,72 @@ class ContentLoaderTest extends UnitTestCase {
     $this->markTestIncomplete();
   }
 
-  public function testEntityExists() {
-    $this->markTestIncomplete();
+  /**
+   * Tests the entityExists method.
+   *
+   * @dataProvider entityExistsDataProvider
+   *
+   * @param bool $expected
+   *   The expected result from the entityExists() method using these arguments.
+   * @param array $content_data
+   *   The content data being tested.
+   * @param callable|null $setupCallack
+   *   (Optional) A callback function to be used to prepare for this specific
+   *   content test.
+   *
+   * @see \Drupal\yaml_content\ContentLoader\ContentLoader::entityExists()
+   */
+  public function testEntityExists($expected, array $content_data, $setupCallack = NULL) {
+    // Execute the callback function for this test case if provided.
+    if (is_callable($setupCallack)) {
+      call_user_func($setupCallack);
+    }
+
+    $entity_type = $content_data['entity'];
+    $actual = $this->contentLoader->entityExists($entity_type, $content_data);
+
+    $this->assertEquals($expected, $actual);
+//    $this->markTestIncomplete();
+  }
+
+  /**
+   * Data provider to prepare entityExists method tests.
+   */
+  public function entityExistsDataProvider() {
+    // Paragraphs should always be recreated since they can't reliably be
+    // identified as duplicates without false positives.
+    $paragraph_test = [
+      // Expected result.
+      FALSE,
+      // Content data.
+      [
+        'entity' => 'paragraph',
+        'type' => 'test_paragraph_bundle',
+        'field_title' => [
+          'value' => 'Test Title',
+        ],
+      ],
+      // Callback setup.
+      NULL,
+    ];
+
+    // Media and file entities require special handling to identify matches.
+    $media_test = [];
+    $file_test = [];
+
+    // Nodes should match regularly based on availalbe property data.
+    // Test an available match.
+    $node_match_test = [];
+    // Test no match found.
+    $node_no_match_test = [];
+
+    return [
+      $paragraph_test,
+//      $media_test,
+//      $file_test,
+//      $node_match_test,
+//      $node_no_match_test,
+    ];
   }
 
 }

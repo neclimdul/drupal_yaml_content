@@ -501,14 +501,14 @@ class ContentLoader implements ContentLoaderInterface {
    *
    * @return \Drupal\Core\Entity\EntityInterface|false
    *   Return a matching entity if one is found, or FALSE otherwise.
+   *
+   * @todo Potentially move this into a separate helper class.
    */
-  protected function entityExists($entity_type, array $content_data) {
-    // Load entity type handler.
-    $entity_handler = $this->entityTypeManager->getStorage($entity_type);
-
+  public function entityExists($entity_type, array $content_data) {
     // Some entities require special handling to determine if it exists.
     switch ($entity_type) {
       // Always create new paragraphs since they're not reusable.
+      // @todo Should new revisions be incorporated here?
       case 'paragraph':
         break;
 
@@ -517,6 +517,10 @@ class ContentLoader implements ContentLoaderInterface {
         break;
 
       default:
+        // Load entity type handler.
+        $entity_handler = $this->entityTypeManager->getStorage($entity_type);
+
+        // @todo Load this through dependency injection instead.
         $query = \Drupal::entityQuery($entity_type);
         foreach ($content_data as $key => $value) {
           if ($key != 'entity' && !is_array($value)) {
