@@ -14,6 +14,8 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Drupal\yaml_content\Event\YamlContentEvents;
 use Drupal\yaml_content\Event\ContentParsedEvent;
+use Drupal\yaml_content\Event\EntityPreSaveEvent;
+use Drupal\yaml_content\Event\EntityPostSaveEvent;
 
 /**
  * ContentLoader class for parsing and importing YAML content.
@@ -152,7 +154,17 @@ class ContentLoader implements ContentLoaderInterface {
     // Create each entity defined in the yml content.
     foreach ($content_data as $content_item) {
       $entity = $this->buildEntity($content_item['entity'], $content_item);
+
+      // Dispatch the pre-save event.
+      $entity_pre_save_event = new EntityPreSaveEvent($this, $entity, $content_item);
+      $this->dispatcher->dispatch(YamlContentEvents::ENTITY_PRE_SAVE, $entity_pre_save_event);
+
       $entity->save();
+
+      // Dispatch the post-save event.
+      $entity_post_save_event = new EntityPostSaveEvent($this, $entity, $content_item);
+      $this->dispatcher->dispatch(YamlContentEvents::ENTITY_POST_SAVE, $entity_post_save_event);
+
       $loaded_content[] = $entity;
     }
 
