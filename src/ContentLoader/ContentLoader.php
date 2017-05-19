@@ -16,6 +16,7 @@ use Drupal\yaml_content\Event\YamlContentEvents;
 use Drupal\yaml_content\Event\ContentParsedEvent;
 use Drupal\yaml_content\Event\EntityPreSaveEvent;
 use Drupal\yaml_content\Event\EntityPostSaveEvent;
+use Drupal\yaml_content\Event\FieldImportEvent;
 
 /**
  * ContentLoader class for parsing and importing YAML content.
@@ -223,8 +224,14 @@ class ContentLoader implements ContentLoaderInterface {
     // Populate fields.
     foreach ($fields as $field_name => $field_data) {
       try {
-        if ($entity->$field_name) {
-          $this->populateField($entity->$field_name, $field_data);
+        if ($entity->hasField($field_name)) {
+          $field_instance = $entity->get($field_name);
+
+          // Dispatch field import event prior to populating fields.
+          $field_import_event = new FieldImportEvent($this, $entity, $field_instance, $field_data);
+          $this->dispatcher->dispatch(YamlContentEvents::IMPORT_FIELD, $field_import_event);
+
+          $this->populateField($field_instance, $field_data);
         }
         else {
           throw new FieldException('Undefined field: ' . $field_name);
@@ -359,7 +366,8 @@ class ContentLoader implements ContentLoaderInterface {
       $process_method = $callback_type . 'EntityLoad';
       if (isset($field_data['#process']['dependency'])) {
         $dependency = $field_data['#process']['dependency'];
-        $process_dependency = new ContentLoader($this->entityTypeManager, $this->moduleHandler);
+        // @todo Implement ContainerInjectionInterface to statically instantiate a new loader.
+        $process_dependency = new ContentLoader($this->entityTypeManager, $this->moduleHandler, $this->dispatcher);
         $process_dependency->setContentPath($this->path);
         $process_dependency->loadContent($dependency, $this->existenceCheck());
       }

@@ -3,7 +3,7 @@
 namespace Drupal\yaml_content\Event;
 
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\yaml_content\ContentLoader\ContentLoaderInterface;
 
 /**
@@ -19,11 +19,11 @@ class FieldImportEvent extends DataImportEvent {
   protected $entity;
 
   /**
-   * The field defnition for the field being populated.
+   * The field object being populated.
    *
-   * @var \Drupal\Core\Field\FieldDefinitionInterface
+   * @var \Drupal\Core\Field\FieldItemListInterface
    */
-  protected $fieldDefinition;
+  protected $field;
 
   /**
    * Constructs a yaml content field import event object.
@@ -32,17 +32,17 @@ class FieldImportEvent extends DataImportEvent {
    *   The active Content Loader that triggered the event.
    * @param \Drupal\Core\Entity\EntityInterface $entity
    *   The entity being populated with field data.
-   * @param \Drupal\Core\Field\FieldDefinitionInterface $field_definition
-   *   The field definition for the field being populated.
+   * @param \Drupal\Core\Field\FieldItemListInterface $field
+   *   The field object being populated.
    * @param array $content_data
    *   The parsed content loaded from the content file to be loaded into
    *   the entity field.
    */
-  public function __construct(ContentLoaderInterface $loader, EntityInterface $entity, FieldDefinitionInterface $field_definition, array $content_data) {
+  public function __construct(ContentLoaderInterface $loader, EntityInterface $entity, FieldItemListInterface $field, array $content_data) {
     parent::__construct($loader, $content_data);
 
     $this->entity = $entity;
-    $this->fieldDefinition = $field_definition;
+    $this->field = $field;
   }
 
   /**
@@ -56,13 +56,13 @@ class FieldImportEvent extends DataImportEvent {
   }
 
   /**
-   * Gets the field definition object for the field being populated.
+   * Gets the field object being populated.
    *
-   * @return \Drupal\Core\Field\FieldDefinitionInterface
-   *   The field definition for the field being populated.
+   * @return \Drupal\Core\Field\FieldItemListInterface
+   *   The field object being populated.
    */
-  public function getFieldDefinition() {
-    return $this->fieldDefinition;
+  public function getField() {
+    return $this->field;
   }
 
 }
