@@ -17,20 +17,6 @@ class DataImportEvent extends EventBase {
   protected $contentData;
 
   /**
-   * The original data parsed from the content file prior to alteration.
-   *
-   * @var array
-   */
-  protected $originalData;
-
-  /**
-   * A flag to track if content data has been altered.
-   *
-   * @var bool
-   */
-  protected $isAltered;
-
-  /**
    * Constructs a yaml content entity pre-save event object.
    *
    * @param \Drupal\yaml_content\ContentLoader\ContentLoaderInterface $loader
@@ -39,13 +25,10 @@ class DataImportEvent extends EventBase {
    *   The parsed content loaded from the content file to be loaded into
    *   the entity field.
    */
-  public function __construct(ContentLoaderInterface $loader, array &$content_data) {
+  public function __construct(ContentLoaderInterface $loader, array $content_data) {
     parent::__construct($loader);
 
-    $this->contentData = &$content_data;
-    $this->originalData = $content_data;
-
-    $this->isAltered = FALSE;
+    $this->contentData = $content_data;
   }
 
   /**
@@ -57,23 +40,6 @@ class DataImportEvent extends EventBase {
    */
   public function getContentData() {
     return $this->contentData;
-  }
-
-  /**
-   * Update the content data being imported.
-   *
-   * @param array $altered_data
-   *   The altered form of the content data that should be imported.
-   *
-   * @return $this
-   */
-  public function alterContentData(array $altered_data) {
-    $this->contentData = $altered_data;
-
-    // Ensure we flag that the data has been altered.
-    $this->isAltered = TRUE;
-
-    return $this;
   }
 
 }

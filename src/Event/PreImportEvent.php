@@ -24,7 +24,7 @@ class PreImportEvent extends EventBase {
    * @param array $import_files
    *   An array of files to be imported in the batch about to begin.
    */
-  public function __construct(ContentLoaderInterface $loader, array &$import_files) {
+  public function __construct(ContentLoaderInterface $loader, array $import_files) {
     parent::__construct($loader);
 
     $this->importFiles = $import_files;

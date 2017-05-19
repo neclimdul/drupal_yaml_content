@@ -33,7 +33,7 @@ class ContentParsedEvent extends EventBase {
    * @param array $parsed_content
    *   The parsed content loaded from the content file.
    */
-  public function __construct(ContentLoaderInterface $loader, $content_file, array &$parsed_content) {
+  public function __construct(ContentLoaderInterface $loader, $content_file, array $parsed_content) {
     parent::__construct($loader);
 
     $this->contentFile = $content_file;
