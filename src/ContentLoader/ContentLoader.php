@@ -11,6 +11,7 @@ use Drupal\node\Entity\Node;
 use Drupal\taxonomy\Entity\Term;
 use Symfony\Component\Yaml\Parser;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * ContentLoader class for parsing and importing YAML content.
@@ -30,6 +31,13 @@ class ContentLoader implements ContentLoaderInterface {
    * @var \Drupal\Core\Extension\ModuleHandlerInterface
    */
   protected $moduleHandler;
+
+  /**
+   * Event dispatcher service to report events throughout the loading process.
+   *
+   * @var \Symfony\Component\EventDispatcher\EventDispatcherInterface
+   */
+  protected $dispatcher;
 
   /**
    * YAML parser.
@@ -66,13 +74,16 @@ class ContentLoader implements ContentLoaderInterface {
    *   Entity type manager.
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $module_handler
    *   Drupal module handler service.
+   * @param \Symfony\Component\EventDispatcher\EventDispatcherInterface $dispatcher
+   *   An event dispatcher service to publish events throughout the process.
    *
    * @todo Fetch parser via dependency injection.
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, ModuleHandlerInterface $module_handler) {
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, ModuleHandlerInterface $module_handler, EventDispatcherInterface $dispatcher) {
     $this->parser = new Parser();
     $this->entityTypeManager = $entity_type_manager;
     $this->moduleHandler = $module_handler;
+    $this->dispatcher = $dispatcher;
   }
 
   /**
