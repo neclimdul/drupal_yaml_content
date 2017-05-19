@@ -5,8 +5,6 @@ namespace Drupal\yaml_content\Event;
 /**
  * Defines events for the YAML Content framework.
  *
- * @see \Drupal\yaml_content\Event\PreImportEvent
- * @see \Drupal\yaml_content\Event\PostImportEvent
  * @see \Drupal\yaml_content\Event\ContentParsedEvent
  * @see \Drupal\yaml_content\Event\EntityPreSaveEvent
  * @see \Drupal\yaml_content\Event\EntityPostSaveEvent
@@ -14,36 +12,6 @@ namespace Drupal\yaml_content\Event;
  * @see \Drupal\yaml_content\Event\FieldImportEvent
  */
 final class YamlContentEvents {
-
-  /**
-   * Name of the event fired when beginning an import operation.
-   *
-   * This event allows modules to perform an action whenever a content import
-   * operation is about to begin. The event listener receives a
-   * \Drupal\yaml_content\Event\PreImportEvent instance.
-   *
-   * @Event
-   *
-   * @see \Drupal\yaml_content\Event\PreImportEvent
-   *
-   * @var string
-   */
-  const PRE_IMPORT = 'yaml_content.import.pre_import';
-
-  /**
-   * Name of the event fired when finishing an import operation.
-   *
-   * This event allows modules to perform an action whenever a content import
-   * operation is completing. The event listener receives a
-   * \Drupal\yaml_content\Event\PostImportEvent instance.
-   *
-   * @Event
-   *
-   * @see \Drupal\yaml_content\Event\PostImportEvent
-   *
-   * @var string
-   */
-  const POST_IMPORT = 'yaml_content.import.post_import';
 
   /**
    * Name of the event fired when a content file is parsed.
