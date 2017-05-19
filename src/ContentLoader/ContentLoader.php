@@ -17,6 +17,7 @@ use Drupal\yaml_content\Event\ContentParsedEvent;
 use Drupal\yaml_content\Event\EntityPreSaveEvent;
 use Drupal\yaml_content\Event\EntityPostSaveEvent;
 use Drupal\yaml_content\Event\FieldImportEvent;
+use Drupal\yaml_content\Event\EntityImportEvent;
 
 /**
  * ContentLoader class for parsing and importing YAML content.
@@ -188,8 +189,15 @@ class ContentLoader implements ContentLoaderInterface {
    *   The created entity from the parsed content data.
    */
   public function buildEntity($entity_type, array $content_data) {
+    // Load entity type definition.
+    $entity_definition = $this->entityTypeManager->getDefinition($entity_type);
+
     // Load entity type handler.
     $entity_handler = $this->entityTypeManager->getStorage($entity_type);
+
+    // Dispatch the entity import event.
+    $entity_import_event = new EntityImportEvent($this, $entity_definition, $content_data);
+    $this->dispatcher->dispatch(YamlContentEvents::IMPORT_ENTITY, $entity_import_event);
 
     // Verify required content data.
     // Parse properties for creation and fields for processing.
