@@ -12,6 +12,8 @@ use Drupal\taxonomy\Entity\Term;
 use Symfony\Component\Yaml\Parser;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Drupal\yaml_content\Event\YamlContentEvents;
+use Drupal\yaml_content\Event\ContentParsedEvent;
 
 /**
  * ContentLoader class for parsing and importing YAML content.
@@ -66,6 +68,13 @@ class ContentLoader implements ContentLoaderInterface {
    * @var string
    */
   protected $path;
+
+  /**
+   * The file path for the content file currently being loaded.
+   *
+   * @var string
+   */
+  protected $contentFile;
 
   /**
    * ContentLoader constructor.
@@ -123,6 +132,10 @@ class ContentLoader implements ContentLoaderInterface {
     // Never leave this as null, even on a failed parsing process.
     // @todo Output a warning for empty content files or failed parsing.
     $this->parsedContent = isset($this->parsedContent) ? $this->parsedContent : [];
+
+    // Dispatch the event notification.
+    $content_parsed_event = new ContentParsedEvent($this, $this->contentFile, $this->parsedContent);
+    $this->dispatcher->dispatch(YamlContentEvents::CONTENT_PARSED, $content_parsed_event);
 
     return $this->parsedContent;
   }
