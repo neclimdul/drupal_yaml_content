@@ -73,6 +73,9 @@ class ContentLoader implements ContentLoaderInterface {
     $this->parser = new Parser();
     $this->entityTypeManager = $entity_type_manager;
     $this->moduleHandler = $module_handler;
+
+    // Default to creating new entities on import.
+    $this->existenceCheck = FALSE;
   }
 
   /**
@@ -96,11 +99,12 @@ class ContentLoader implements ContentLoaderInterface {
    * Set the whether or not the system should check for previous demo content.
    *
    * @param bool $existence_check
-   *   The true/false value of existence check.
+   *   The true/false value of existence check. Defaults to true if no value
+   *   is provided.
    *
    * @return $this
    */
-  public function setExistenceCheck($existence_check) {
+  public function setExistenceCheck($existence_check = TRUE) {
     $this->existenceCheck = $existence_check;
 
     return $this;

@@ -152,6 +152,51 @@ class ContentLoaderTest extends UnitTestCase {
   }
 
   /**
+   * Confirm the default value for existenceCheck().
+   *
+   * @return \Drupal\yaml_content\ContentLoader\ContentLoader
+   *   The ContentLoader service being tested.
+   */
+  public function testExistenceCheckDefault() {
+    $this->assertFalse($this->contentLoader->existenceCheck());
+
+    return $this->contentLoader;
+  }
+
+  /**
+   * Confirm the existence check value can be enabled.
+   *
+   * @param \Drupal\yaml_content\ContentLoader\ContentLoader $content_loader
+   *   The ContentLoader service being tested.
+   *
+   * @return \Drupal\yaml_content\ContentLoader\ContentLoader
+   *   The ContentLoader service being tested.
+   *
+   * @depends testExistenceCheckDefault
+   */
+  public function testEnableExistenceCheck(ContentLoader $content_loader) {
+    $content_loader->setExistenceCheck();
+
+    $this->assertTrue($content_loader->existenceCheck());
+
+    return $content_loader;
+  }
+
+  /**
+   * Confirm the existence check value can be disabled.
+   *
+   * @param \Drupal\yaml_content\ContentLoader\ContentLoader $content_loader
+   *   The ContentLoader service being tested.
+   *
+   * @depends testEnableExistenceCheck
+   */
+  public function testDisableExistenceCheck(ContentLoader $content_loader) {
+    $content_loader->setExistenceCheck(FALSE);
+
+    $this->assertFalse($content_loader->existenceCheck());
+  }
+
+  /**
    * Test general behavior of the parseContent() method.
    *
    * @see \Drupal\yaml_content\ContentLoader\ContentLoader::parseContent()
