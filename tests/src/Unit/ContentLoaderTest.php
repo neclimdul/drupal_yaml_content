@@ -299,7 +299,28 @@ class ContentLoaderTest extends UnitTestCase {
   public function testBuildEntity($entity_type, $test_content) {
     $this->setupBuildEntityTests();
 
-    $this->markTestIncomplete();
+    // Disable existence checking.
+    $this->contentLoader->setExistenceCheck(FALSE);
+
+    // Prepare a mock entity to be created with stubbed methods.
+    // @todo Expand this or add additional tests for missing field assignments.
+    // @todo Expand this to confirm the correct field list is being passed to populateField().
+    $entity_mock = $this->getEntityMock();
+    $entity_mock->method('hasField')
+      ->willReturn(TRUE);
+
+    // Return the mocked entity when it is created.
+    $this->configStorage
+      ->method('create')
+      ->willReturn($entity_mock);
+
+    // Expect some fields to be populated.
+    // @todo Expand logic here to more flexibly test multiple test data scenarios.
+    // @todo Expand logic to confirm argument types submitted.
+    $this->contentLoader->expects($this->atLeastOnce())
+      ->method('populateField');
+
+    $this->contentLoader->buildEntity($entity_type, $test_content);
   }
 
   /**

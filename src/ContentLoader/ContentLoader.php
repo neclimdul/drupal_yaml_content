@@ -257,7 +257,7 @@ class ContentLoader implements ContentLoaderInterface {
    *
    * @todo Handle field data types more dynamically with typed data.
    */
-  protected function populateField($field, array &$field_data) {
+  public function populateField($field, array &$field_data) {
     // Get the field cardinality to determine whether or not a value should be
     // 'set' or 'appended' to.
     $cardinality = $field->getFieldDefinition()
