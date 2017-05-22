@@ -5,7 +5,6 @@ namespace Drupal\Tests\yaml_content\Unit;
 use Drupal\Tests\UnitTestCase;
 use org\bovigo\vfs\vfsStream;
 use Drupal\yaml_content\ContentLoader\ContentLoader;
-use org\bovigo\vfs\vfsStreamWrapper;
 
 /**
  * @coversDefaultClass \Drupal\yaml_content\ContentLoader\ContentLoader
@@ -55,12 +54,28 @@ class ContentLoaderTest extends UnitTestCase {
    *   A mock entity object.
    *
    * @see \Drupal\Tests\views\Unit\Plugin\area\EntityTest::setUp()
+   *
+   * @todo Extend to accept configuration for available and missing fields.
    */
-  protected function getEntityMock() {
-    $mock_entity = $this->getMockForAbstractClass('Drupal\Core\Entity\Entity', [], '', FALSE, TRUE, TRUE, ['bundle']);
+  protected function getEntityMock(array $defined_fields = []) {
+    $mock_entity = $this->getMockForAbstractClass(
+      'Drupal\Core\Entity\ContentEntityInterface',
+      [],
+      '',
+      FALSE,
+      TRUE,
+      TRUE,
+      ['bundle']);
+
+    // Mock the bundle() method.
     $mock_entity->expects($this->any())
       ->method('bundle')
       ->will($this->returnValue('test_bundle'));
+
+    // Mock the hasField() method.
+    $mock_entity->expects($this->any())
+      ->method('hasField')
+      ->willReturn(TRUE);
 
     return $mock_entity;
   }
@@ -223,8 +238,10 @@ class ContentLoaderTest extends UnitTestCase {
     // Confirm the file is not actually present.
     $this->assertFalse($this->root->hasChild('content/missing.content.yml'));
 
-    // Prepare and parse the missing content file.
+    // Prepare the path for the missing content file.
     $this->contentLoader->setContentPath($this->root->url());
+
+    // Parse the test file expecting an error for the missing file.
     $parsed_content = $this->contentLoader->parseContent($test_file);
   }
 
@@ -259,6 +276,8 @@ class ContentLoaderTest extends UnitTestCase {
     $stub_methods = array_diff(get_class_methods(ContentLoader::class), [
       'buildEntity',
       'categorizeEntityFieldsAndProperties',
+      'setExistenceCheck',
+      'existenceCheck',
     ]);
 
     $this->contentLoader = $this->getMockBuilder(ContentLoader::class)
@@ -294,15 +313,18 @@ class ContentLoaderTest extends UnitTestCase {
     $this->setupBuildEntityTests();
 
     // Confirm the scenario actually ran as expected.
-    $this->contentLoader
-      ->expects($this->once())
-      ->method('existenceCheck')
-      ->willReturn(FALSE);
+    $this->contentLoader->setExistenceCheck(FALSE);
 
     // Confirm `entityExists()` was never called.
     $this->contentLoader
       ->expects($this->never())
       ->method('entityExists');
+
+    // Confirm an entity was created.
+    $this->configStorage
+      ->expects($this->once())
+      ->method('create')
+      ->willReturn($this->getEntityMock());
 
     $this->contentLoader->buildEntity($entity_type, $test_content);
   }
@@ -317,13 +339,53 @@ class ContentLoaderTest extends UnitTestCase {
   public function testBuildEntityExistenceCheckCallsEntityExists($entity_type, $test_content) {
     $this->setupBuildEntityTests();
 
-    $this->contentLoader
-      ->setExistenceCheck(TRUE);
+    // Enable the existence checking.
+    $this->contentLoader->setExistenceCheck();
 
+    // Indicate the entity already exists.
+    $this->contentLoader
+      ->expects($this->once())
+      ->method('entityExists')
+      ->willReturn($this->getEntityMock());
+
+    // Since the entity exists one should never be created.
+    $this->configStorage
+      ->expects($this->never())
+      ->method('create');
+
+    // Trigger the method for testing with the test data.
+    $this->contentLoader->buildEntity($entity_type, $test_content);
+  }
+
+  /**
+   * Tests that buildEntity() correctly handles unmatched entities.
+   *
+   * Confirm behavior when entity existence checking is enabled, but no
+   * matching entities were found.
+   *
+   * @dataProvider contentDataProvider
+   *
+   * @see \Drupal\Tests\yaml_content\Unit\ContentLoaderTest::setupBuildEntityTests()
+   */
+  public function testBuildEntityExistenceCheckFindsNoMatches($entity_type, $test_content) {
+    $this->setupBuildEntityTests();
+
+    // Enable the existence checking.
+    $this->contentLoader->setExistenceCheck(TRUE);
+
+    // Indicate no matching entity was found.
+    $this->contentLoader
+      ->expects($this->once())
+      ->method('entityExists')
+      ->willReturn(FALSE);
+
+    // Since the entity exists one should never be created.
     $this->configStorage
       ->expects($this->once())
-      ->method('entityExists');
+      ->method('create')
+      ->willReturn($this->getEntityMock());
 
+    // Trigger the method for testing with the test data.
     $this->contentLoader->buildEntity($entity_type, $test_content);
   }
 
@@ -334,6 +396,8 @@ class ContentLoaderTest extends UnitTestCase {
    *   An array of content testing arguments:
    *   - string Entity Type
    *   - array Content data structure
+   *
+   * @todo Refactor to provide entity definition and content data.
    */
   public function contentDataProvider() {
     $test_content['basic_node'] = [
@@ -358,14 +422,30 @@ class ContentLoaderTest extends UnitTestCase {
     $this->markTestIncomplete();
   }
 
+  /**
+   * Test the preprocessFieldData method.
+   *
+   * @todo Test missing reference functions.
+   */
   public function testPreprocessFieldData() {
     $this->markTestIncomplete();
   }
 
+  /**
+   * Test the referenceEntityLoad processor method.
+   */
   public function testReferenceEntityLoad() {
     $this->markTestIncomplete();
   }
 
+  /**
+   * Test the fileEntityLoad processor method.
+   *
+   * @todo Test loading an image.
+   * @todo Test loading a file.
+   * @todo Test attempts to load missing files.
+   * @todo Test attempts to load from missing subdirectories.
+   */
   public function testFileEntityLoad() {
     $this->markTestIncomplete();
   }

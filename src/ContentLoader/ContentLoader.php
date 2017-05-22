@@ -14,6 +14,9 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 
 /**
  * ContentLoader class for parsing and importing YAML content.
+ *
+ * @todo Refactor to implement ContainerInjectionInterface.
+ * @todo Refactor to use a separate static helper service.
  */
 class ContentLoader implements ContentLoaderInterface {
 
@@ -155,8 +158,8 @@ class ContentLoader implements ContentLoaderInterface {
    *   The array of content data to be parsed.
    *
    * @return array
-   *   An associative array of entity keys and properties. The top level contains
-   *   the keys:
+   *   An associative array of entity keys and properties. The top level
+   *   contains the keys:
    *   - `fields`
    *   - `properties`
    *
@@ -164,6 +167,7 @@ class ContentLoader implements ContentLoaderInterface {
    *   field or property name.
    *
    * @todo Use entity type information to more accurately identify attributes.
+   * @todo Potentially move this into a separate helper service class.
    */
   protected function categorizeEntityFieldsAndProperties(array $content_data) {
     // Identify entity fields and properties.
