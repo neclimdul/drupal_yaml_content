@@ -381,10 +381,16 @@ class ContentLoader implements ContentLoaderInterface {
    *
    * @param object $field
    *   The entity field object.
-   * @param array $field_data
+   * @param array|string $field_data
    *   The field data.
    */
-  protected function preprocessFieldData($field, array &$field_data) {
+  protected function preprocessFieldData($field, &$field_data) {
+    // Break here if the field data is not an array since there can be no
+    // processing instructions included.
+    if (!is_array($field_data)) {
+      return;
+    }
+
     // Check for a callback processor defined at the value level.
     if (isset($field_data['#process']) && isset($field_data['#process']['callback'])) {
       $callback_type = $field_data['#process']['callback'];
