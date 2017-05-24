@@ -27,6 +27,13 @@ class ContentLoaderTest extends UnitTestCase {
   protected $entityTypeManager;
 
   /**
+   * The mocked EntityFieldManager service.
+   *
+   * @var \PHPUnit_Framework_MockObject_MockObject
+   */
+  protected $entityFieldManager;
+
+  /**
    * The mocked ModuleHandler service.
    *
    * @var \PHPUnit_Framework_MockObject_MockObject
@@ -106,6 +113,21 @@ class ContentLoaderTest extends UnitTestCase {
   }
 
   /**
+   * Prepare a mock entityFieldManager service object for testing.
+   *
+   * @return \PHPUnit_Framework_MockObject_MockObject
+   *   A mock EntityFieldManager service.
+   */
+  protected function getEntityFieldManagerMock() {
+    // Mock the entity field manager service.
+    $this->entityFieldManager = $this->getMockBuilder('Drupal\Core\Entity\EntityFieldManager')
+      ->disableOriginalConstructor()
+      ->getMock();
+
+    return $this->entityFieldManager;
+  }
+
+  /**
    * Prepare a mock ModuleHandler service object for testing.
    *
    * @return \PHPUnit_Framework_MockObject_MockObject
@@ -150,10 +172,12 @@ class ContentLoaderTest extends UnitTestCase {
 
     // Mock the EntityTypeManager.
     $this->entityTypeManager = $this->getEntityTypeManagerMock();
+    // Mock the EntityFieldManager.
+    $this->entityFieldManager = $this->getEntityFieldManagerMock();
     // Mock the ModuleHandler.
     $this->moduleHandler = $this->getModuleHandlerMock();
 
-    $this->contentLoader = new ContentLoader($this->entityTypeManager, $this->moduleHandler);
+    $this->contentLoader = new ContentLoader($this->entityTypeManager, $this->entityFieldManager, $this->moduleHandler);
   }
 
   /**
@@ -283,6 +307,7 @@ class ContentLoaderTest extends UnitTestCase {
     $this->contentLoader = $this->getMockBuilder(ContentLoader::class)
       ->setConstructorArgs([
         $this->getEntityTypeManagerMock(),
+        $this->getEntityFieldManagerMock(),
         $this->getModuleHandlerMock(),
       ])
       ->setMethods($stub_methods)
