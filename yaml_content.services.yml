@@ -1,4 +1,7 @@
 services:
   yaml_content.content_loader:
     class: Drupal\yaml_content\ContentLoader\ContentLoader
-    arguments: ['@entity_type.manager', '@module_handler']
+    arguments:
+      - '@entity_type.manager'
+      - '@entity_field.manager'
+      - '@module_handler'

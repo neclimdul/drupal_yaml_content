@@ -3,6 +3,8 @@
 namespace Drupal\yaml_content\ContentLoader;
 
 use Drupal\Core\Config\ConfigValueException;
+use Drupal\Core\Entity\EntityFieldManagerInterface;
+use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Field\EntityReferenceFieldItemList;
 use Drupal\Core\Field\FieldException;
@@ -26,6 +28,13 @@ class ContentLoader implements ContentLoaderInterface {
    * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
   protected $entityTypeManager;
+
+  /**
+   * The entity field manager service.
+   *
+   * @var \Drupal\Core\Entity\EntityFieldManagerInterface
+   */
+  protected $entityFieldManager;
 
   /**
    * The module handler interface for invoking any hooks.
@@ -63,18 +72,28 @@ class ContentLoader implements ContentLoaderInterface {
   protected $path;
 
   /**
+   * The file path for the content file currently being loaded.
+   *
+   * @var string
+   */
+  protected $contentFile;
+
+  /**
    * ContentLoader constructor.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   Entity type manager.
+   * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entity_field_manager
+   *   Entity field manager service.
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $module_handler
    *   Drupal module handler service.
    *
    * @todo Fetch parser via dependency injection.
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, ModuleHandlerInterface $module_handler) {
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, ModuleHandlerInterface $module_handler) {
     $this->parser = new Parser();
     $this->entityTypeManager = $entity_type_manager;
+    $this->entityFieldManager = $entity_field_manager;
     $this->moduleHandler = $module_handler;
 
     // Default to creating new entities on import.
@@ -152,40 +171,46 @@ class ContentLoader implements ContentLoaderInterface {
   }
 
   /**
-   * Identify entity field and property keys.
+   * Identify data keys as properties, fields, or other.
    *
-   * @param array $content_data
-   *   The array of content data to be parsed.
+   * @param \Drupal\Core\Entity\EntityTypeInterface $entity_definition
+   *   The entity type definition for the entity being imported.
+   * @param string $key
+   *   The data key being identified.
    *
-   * @return array
-   *   An associative array of entity keys and properties. The top level
-   *   contains the keys:
-   *   - `fields`
-   *   - `properties`
+   * @return string
+   *   The type of attribute being identified. This value may be one of:
    *
-   *   The second level contains the content data for each item keyed by the
-   *   field or property name.
+   *   - property
+   *     All values defined as entity keys will be indicated as properties.
+   *   - field
+   *     Defined fields for the entity type not indicated as entity keys will
+   *     be indicated as fields.
+   *   - other
+   *     All other values will be categorized here.
    *
    * @todo Use entity type information to more accurately identify attributes.
    * @todo Potentially move this into a separate helper service class.
    */
-  protected function categorizeEntityFieldsAndProperties(array $content_data) {
-    // Identify entity fields and properties.
-    $fields = [];
-    $properties = [];
-    foreach (array_keys($content_data) as $key) {
-      if (strpos($key, 'field') === 0) {
-        $fields[$key] = $content_data[$key];
-      }
-      else {
-        $properties[$key] = $content_data[$key];
-      }
+  protected function identityAttributeType(EntityTypeInterface $entity_definition, $key) {
+    // Load the list of fields defined for the entity type.
+    // @todo Add validation that the entity type is listed here.
+    $field_map = $this->entityFieldManager->getFieldMap();
+    $field_list = $field_map[$entity_definition->id()];
+
+    $attribute_type = '';
+
+    if ($entity_definition->hasKey($key)) {
+      $attribute_type = 'property';
+    }
+    elseif (array_key_exists($key, $field_list)) {
+      $attribute_type = 'field';
+    }
+    else {
+      $attribute_type = 'other';
     }
 
-    return [
-      'fields' => $fields,
-      'properties' => $properties,
-    ];
+    return $attribute_type;
   }
 
   /**
@@ -200,37 +225,49 @@ class ContentLoader implements ContentLoaderInterface {
    *   The created entity from the parsed content data.
    */
   public function buildEntity($entity_type, array $content_data) {
+    // Load entity type definition.
+    $entity_definition = $this->entityTypeManager->getDefinition($entity_type);
+
     // Load entity type handler.
     $entity_handler = $this->entityTypeManager->getStorage($entity_type);
 
-    // Verify required content data.
     // Parse properties for creation and fields for processing.
-    $attributes = $this->categorizeEntityFieldsAndProperties($content_data);
-    $fields = $attributes['fields'];
-    $properties = $attributes['properties'];
+    $attributes = [];
+    foreach ($content_data as $key => $data) {
+      $type = $this->identityAttributeType($entity_definition, $key);
+
+      // Process simple values as properties for initial creation.
+      if ($type == 'field' && !is_array($data)) {
+        $type = 'property';
+      }
+
+      $attributes[$type][$key] = $data;
+    }
 
     // If it is a 'user' entity, append a timestamp to make the username unique.
-    if ($entity_type == 'user' && isset($properties['name'][0]['value'])) {
-      $properties['name'][0]['value'] .= '_' . time();
+    if ($entity_type == 'user' && isset($attributes['property']['name'][0]['value'])) {
+      $attributes['property']['name'][0]['value'] .= '_' . time();
     }
     // Create the entity only if we do not want to check for existing nodes.
     if (!$this->existenceCheck()) {
-      $entity = $entity_handler->create($properties);
+      $entity = $entity_handler->create($attributes['property']);
     }
     else {
       $entity = $this->entityExists($entity_type, $content_data);
 
       // Create the entity if no existing one was found.
       if ($entity === FALSE) {
-        $entity = $entity_handler->create($properties);
+        $entity = $entity_handler->create($attributes['property']);
       }
     }
 
     // Populate fields.
-    foreach ($fields as $field_name => $field_data) {
+    foreach ($attributes['field'] as $field_name => $field_data) {
       try {
         if ($entity->hasField($field_name)) {
-          $this->populateField($entity->get($field_name), $field_data);
+          $field_instance = $entity->get($field_name);
+
+          $this->populateField($field_instance, $field_data);
         }
         else {
           throw new FieldException('Undefined field: ' . $field_name);
@@ -355,17 +392,24 @@ class ContentLoader implements ContentLoaderInterface {
    *
    * @param object $field
    *   The entity field object.
-   * @param array $field_data
+   * @param array|string $field_data
    *   The field data.
    */
-  protected function preprocessFieldData($field, array &$field_data) {
+  protected function preprocessFieldData($field, &$field_data) {
+    // Break here if the field data is not an array since there can be no
+    // processing instructions included.
+    if (!is_array($field_data)) {
+      return;
+    }
+
     // Check for a callback processor defined at the value level.
     if (isset($field_data['#process']) && isset($field_data['#process']['callback'])) {
       $callback_type = $field_data['#process']['callback'];
       $process_method = $callback_type . 'EntityLoad';
       if (isset($field_data['#process']['dependency'])) {
         $dependency = $field_data['#process']['dependency'];
-        $process_dependency = new ContentLoader($this->entityTypeManager, $this->moduleHandler);
+        // @todo Implement ContainerInjectionInterface to statically instantiate a new loader.
+        $process_dependency = new ContentLoader($this->entityTypeManager, $this->entityFieldManager, $this->moduleHandler);
         $process_dependency->setContentPath($this->path);
         $process_dependency->loadContent($dependency, $this->existenceCheck());
       }
