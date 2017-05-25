@@ -180,7 +180,7 @@ class ContentLoader implements ContentLoaderInterface {
    * @todo Use entity type information to more accurately identify attributes.
    * @todo Potentially move this into a separate helper service class.
    */
-  protected function identityAttributeType(EntityTypeInterface $entity_definition, $key) {
+  protected function identifyAttributeType(EntityTypeInterface $entity_definition, $key) {
     // Load the list of fields defined for the entity type.
     // @todo Add validation that the entity type is listed here.
     $field_map = $this->entityFieldManager->getFieldMap();
@@ -223,7 +223,7 @@ class ContentLoader implements ContentLoaderInterface {
     // Parse properties for creation and fields for processing.
     $attributes = [];
     foreach ($content_data as $key => $data) {
-      $type = $this->identityAttributeType($entity_definition, $key);
+      $type = $this->identifyAttributeType($entity_definition, $key);
 
       // Process simple values as properties for initial creation.
       if ($type == 'field' && !is_array($data)) {
