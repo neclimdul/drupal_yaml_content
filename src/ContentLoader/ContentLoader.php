@@ -9,8 +9,6 @@ use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Field\EntityReferenceFieldItemList;
 use Drupal\Core\Field\FieldException;
 use Drupal\Core\TypedData\Exception\MissingDataException;
-use Drupal\node\Entity\Node;
-use Drupal\taxonomy\Entity\Term;
 use Symfony\Component\Yaml\Parser;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 
@@ -192,13 +190,11 @@ class ContentLoader implements ContentLoaderInterface {
    * @todo Use entity type information to more accurately identify attributes.
    * @todo Potentially move this into a separate helper service class.
    */
-  protected function identityAttributeType(EntityTypeInterface $entity_definition, $key) {
+  protected function identifyAttributeType(EntityTypeInterface $entity_definition, $key) {
     // Load the list of fields defined for the entity type.
     // @todo Add validation that the entity type is listed here.
     $field_map = $this->entityFieldManager->getFieldMap();
     $field_list = $field_map[$entity_definition->id()];
-
-    $attribute_type = '';
 
     if ($entity_definition->hasKey($key)) {
       $attribute_type = 'property';
@@ -232,9 +228,13 @@ class ContentLoader implements ContentLoaderInterface {
     $entity_handler = $this->entityTypeManager->getStorage($entity_type);
 
     // Parse properties for creation and fields for processing.
-    $attributes = [];
+    $attributes = [
+      'property' => [],
+      'field' => [],
+      'other' => [],
+    ];
     foreach ($content_data as $key => $data) {
-      $type = $this->identityAttributeType($entity_definition, $key);
+      $type = $this->identifyAttributeType($entity_definition, $key);
 
       // Process simple values as properties for initial creation.
       if ($type == 'field' && !is_array($data)) {

@@ -55,6 +55,47 @@ class ContentLoaderTest extends UnitTestCase {
   protected $contentLoader;
 
   /**
+   * An internal field map for use from the EntityFieldManager mock service.
+   *
+   * @var array
+   */
+  protected $fieldMap;
+
+  /**
+   * An array of pre-built entity definitions for test preparation.
+   *
+   * @var array
+   *
+   * @todo Move this into a more dynamic helper class.
+   */
+  protected $testEntityDefinitions = [
+    'node' => [
+      'entity_keys' => [
+        'id' => 'nid',
+        'revision' => 'vid',
+        'bundle' => 'type',
+        'label' => 'title',
+        'langcode' => 'langcode',
+        'uuid' => 'uuid',
+        'status' => 'status',
+        'published' => 'status',
+        'uid' => 'uid',
+        'default_langcode' => 'default_langcode',
+      ],
+      'fields' => [
+        'nid' => 'nid',
+        'vid' => 'vid',
+        'uid' => 'uid',
+        'type' => 'type',
+        'status' => 'status',
+        'title' => 'title',
+        'body' => 'body',
+        'field_existing_field' => 'field_existing_field',
+      ],
+    ],
+  ];
+
+  /**
    * Prepare an abstract Entity mock object.
    *
    * @return \PHPUnit_Framework_MockObject_MockObject
@@ -124,6 +165,15 @@ class ContentLoaderTest extends UnitTestCase {
       ->disableOriginalConstructor()
       ->getMock();
 
+    // Return field map using a closure to ensure we include all registered
+    // definitions instead of just what is registered at the time of this
+    // execution.
+    $this->entityFieldManager
+      ->method('getFieldMap')
+      ->willReturnCallback(function () {
+        return $this->fieldMap;
+      });
+
     return $this->entityFieldManager;
   }
 
@@ -157,6 +207,40 @@ class ContentLoaderTest extends UnitTestCase {
       ->at($this->root->getChild('content'));
 
     return $this;
+  }
+
+  /**
+   * Register a mock entity type definition with the EntityTypeManager mock.
+   *
+   * @param string $entity_type
+   *   The machine name for the mocked entity type.
+   * @param array $entity_keys
+   *   Array data to populate as entity keys for the entity type.
+   * @param array $fields
+   *   An array of field data definitions to populate into the entity type.
+   */
+  protected function mockEntityTypeDefinition($entity_type, array $entity_keys, array $fields) {
+    // Mock the initial entity type definition.
+    $definition = $this->getMockBuilder('Drupal\Core\Entity\EntityType')
+      ->disableOriginalConstructor()
+      ->getMock();
+    $definition->method('id')
+      ->willReturn($entity_type);
+
+    // Define a closure to check against the parameter for entity keys.
+    $definition->method('hasKey')
+      ->with($this->anything())
+      ->willReturnCallback(function ($key) use ($entity_keys) {
+        return in_array($key, $entity_keys);
+      });
+
+    // Register the definition to return from the entity type manager.
+    $this->entityTypeManager->method('getDefinition')
+      ->with($entity_type)
+      ->willReturn($definition);
+
+    // Define the fields in the mocked field map.
+    $this->fieldMap[$entity_type] = $fields;
   }
 
   /**
@@ -293,8 +377,13 @@ class ContentLoaderTest extends UnitTestCase {
 
   /**
    * Setup test fixtures for `buildEntity()` tests.
+   *
+   * @param string $entity_type
+   *   The machine name for the entity type being tested. If it is defined in
+   *   $testEntityDefinitions, this entity definition will be loaded into the
+   *   mocked EntityTypeManager and EntityFieldManager services.
    */
-  public function setupBuildEntityTests() {
+  public function setupBuildEntityTests($entity_type = '') {
     // Methods to be stubbed in the mock.
     // All methods except the ones excluded in the array below will be stubbed.
     $stub_methods = array_diff(get_class_methods(ContentLoader::class), [
@@ -304,6 +393,7 @@ class ContentLoaderTest extends UnitTestCase {
       'existenceCheck',
     ]);
 
+    // Partially mock the ContentLoader for testing specific methods.
     $this->contentLoader = $this->getMockBuilder(ContentLoader::class)
       ->setConstructorArgs([
         $this->getEntityTypeManagerMock(),
@@ -312,6 +402,15 @@ class ContentLoaderTest extends UnitTestCase {
       ])
       ->setMethods($stub_methods)
       ->getMock();
+
+    // Load entity type definition into mock services.
+    if (array_key_exists($entity_type, $this->testEntityDefinitions)) {
+      $this->mockEntityTypeDefinition(
+        $entity_type,
+        $this->testEntityDefinitions[$entity_type]['entity_keys'],
+        $this->testEntityDefinitions[$entity_type]['fields']
+      );
+    }
   }
 
   /**
@@ -322,7 +421,7 @@ class ContentLoaderTest extends UnitTestCase {
    * @see \Drupal\Tests\yaml_content\Unit\ContentLoaderTest::setupBuildEntityTests()
    */
   public function testBuildEntity($entity_type, $test_content) {
-    $this->setupBuildEntityTests();
+    $this->setupBuildEntityTests($entity_type);
 
     // Disable existence checking.
     $this->contentLoader->setExistenceCheck(FALSE);
@@ -356,7 +455,7 @@ class ContentLoaderTest extends UnitTestCase {
    * @see \Drupal\Tests\yaml_content\Unit\ContentLoaderTest::setupBuildEntityTests()
    */
   public function testBuildEntityExistenceCheckDoesntCallEntityExists($entity_type, $test_content) {
-    $this->setupBuildEntityTests();
+    $this->setupBuildEntityTests($entity_type);
 
     // Confirm the scenario actually ran as expected.
     $this->contentLoader->setExistenceCheck(FALSE);
@@ -383,7 +482,7 @@ class ContentLoaderTest extends UnitTestCase {
    * @see \Drupal\Tests\yaml_content\Unit\ContentLoaderTest::setupBuildEntityTests()
    */
   public function testBuildEntityExistenceCheckCallsEntityExists($entity_type, $test_content) {
-    $this->setupBuildEntityTests();
+    $this->setupBuildEntityTests($entity_type);
 
     // Enable the existence checking.
     $this->contentLoader->setExistenceCheck();
@@ -414,7 +513,7 @@ class ContentLoaderTest extends UnitTestCase {
    * @see \Drupal\Tests\yaml_content\Unit\ContentLoaderTest::setupBuildEntityTests()
    */
   public function testBuildEntityExistenceCheckFindsNoMatches($entity_type, $test_content) {
-    $this->setupBuildEntityTests();
+    $this->setupBuildEntityTests($entity_type);
 
     // Enable the existence checking.
     $this->contentLoader->setExistenceCheck(TRUE);
@@ -450,11 +549,11 @@ class ContentLoaderTest extends UnitTestCase {
       'entity' => 'node',
       'status' => 1,
       'title' => 'Test Title',
-      'field_rich_text' => [
+      'body' => [
         'value' => 'Lorem Ipsum',
         'format' => 'full_html',
       ],
-      'field_simple_value' => [
+      'field_existing_field' => [
         'value' => 'simple',
       ],
     ];
@@ -499,22 +598,22 @@ class ContentLoaderTest extends UnitTestCase {
   /**
    * Tests the entityExists method.
    *
-   * @dataProvider entityExistsDataProvider
-   *
    * @param bool $expected
    *   The expected result from the entityExists() method using these arguments.
    * @param array $content_data
    *   The content data being tested.
-   * @param callable|null $setupCallack
+   * @param callable|null $setupCallback
    *   (Optional) A callback function to be used to prepare for this specific
    *   content test.
    *
+   * @dataProvider entityExistsDataProvider
+   *
    * @see \Drupal\yaml_content\ContentLoader\ContentLoader::entityExists()
    */
-  public function testEntityExists($expected, array $content_data, $setupCallack = NULL) {
+  public function testEntityExists($expected, array $content_data, $setupCallback = NULL) {
     // Execute the callback function for this test case if provided.
-    if (is_callable($setupCallack)) {
-      call_user_func($setupCallack);
+    if (is_callable($setupCallback)) {
+      call_user_func($setupCallback);
     }
 
     $entity_type = $content_data['entity'];
