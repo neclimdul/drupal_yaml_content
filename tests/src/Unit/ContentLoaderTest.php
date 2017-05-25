@@ -350,7 +350,7 @@ class ContentLoaderTest extends UnitTestCase {
     $this->contentLoader->setContentPath($this->root->url());
 
     // Parse the test file expecting an error for the missing file.
-    $parsed_content = $this->contentLoader->parseContent($test_file);
+    $this->contentLoader->parseContent($test_file);
   }
 
   /**
@@ -371,6 +371,11 @@ class ContentLoaderTest extends UnitTestCase {
     $this->assertArrayEquals([], $parsed_content, 'Empty content files return an empty array.');
   }
 
+  /**
+   * Test the entry point content loading behavior.
+   *
+   * @see \Drupal\yaml_content\ContentLoader\ContentLoader::loadContent()
+   */
   public function testLoadContent() {
     $this->markTestIncomplete();
   }
@@ -416,11 +421,16 @@ class ContentLoaderTest extends UnitTestCase {
   /**
    * Tests general functionality of the `buildEntity()` method.
    *
+   * @param string $entity_type
+   *   The entity type machine name for the content being tested.
+   * @param array $test_content
+   *   Import content for this test scenario.
+   *
    * @dataProvider contentDataProvider
    *
    * @see \Drupal\Tests\yaml_content\Unit\ContentLoaderTest::setupBuildEntityTests()
    */
-  public function testBuildEntity($entity_type, $test_content) {
+  public function testBuildEntity($entity_type, array $test_content) {
     $this->setupBuildEntityTests($entity_type);
 
     // Disable existence checking.
@@ -450,11 +460,16 @@ class ContentLoaderTest extends UnitTestCase {
   /**
    * Tests that entityExists() is never called if the flag is disabled.
    *
+   * @param string $entity_type
+   *   The entity type machine name for the content being tested.
+   * @param array $test_content
+   *   Import content for this test scenario.
+   *
    * @dataProvider contentDataProvider
    *
    * @see \Drupal\Tests\yaml_content\Unit\ContentLoaderTest::setupBuildEntityTests()
    */
-  public function testBuildEntityExistenceCheckDoesntCallEntityExists($entity_type, $test_content) {
+  public function testBuildEntityExistenceCheckDoesntCallEntityExists($entity_type, array $test_content) {
     $this->setupBuildEntityTests($entity_type);
 
     // Confirm the scenario actually ran as expected.
@@ -477,11 +492,16 @@ class ContentLoaderTest extends UnitTestCase {
   /**
    * Tests that entityExists() is correctly called if the flag is enabled.
    *
+   * @param string $entity_type
+   *   The entity type machine name for the content being tested.
+   * @param array $test_content
+   *   Import content for this test scenario.
+   *
    * @dataProvider contentDataProvider
    *
    * @see \Drupal\Tests\yaml_content\Unit\ContentLoaderTest::setupBuildEntityTests()
    */
-  public function testBuildEntityExistenceCheckCallsEntityExists($entity_type, $test_content) {
+  public function testBuildEntityExistenceCheckCallsEntityExists($entity_type, array $test_content) {
     $this->setupBuildEntityTests($entity_type);
 
     // Enable the existence checking.
@@ -508,11 +528,16 @@ class ContentLoaderTest extends UnitTestCase {
    * Confirm behavior when entity existence checking is enabled, but no
    * matching entities were found.
    *
+   * @param string $entity_type
+   *   The entity type machine name for the content being tested.
+   * @param array $test_content
+   *   Import content for this test scenario.
+   *
    * @dataProvider contentDataProvider
    *
    * @see \Drupal\Tests\yaml_content\Unit\ContentLoaderTest::setupBuildEntityTests()
    */
-  public function testBuildEntityExistenceCheckFindsNoMatches($entity_type, $test_content) {
+  public function testBuildEntityExistenceCheckFindsNoMatches($entity_type, array $test_content) {
     $this->setupBuildEntityTests($entity_type);
 
     // Enable the existence checking.
@@ -563,6 +588,11 @@ class ContentLoaderTest extends UnitTestCase {
     ];
   }
 
+  /**
+   * Test field population behavior.
+   *
+   * @see \Drupal\yaml_content\ContentLoader\ContentLoader::populateField()
+   */
   public function testPopulateField() {
     $this->markTestIncomplete();
   }
@@ -625,6 +655,8 @@ class ContentLoaderTest extends UnitTestCase {
 
   /**
    * Data provider to prepare entityExists method tests.
+   *
+   * @todo Extend data sets for more complete testing.
    */
   public function entityExistsDataProvider() {
     // Paragraphs should always be recreated since they can't reliably be
@@ -645,21 +677,22 @@ class ContentLoaderTest extends UnitTestCase {
     ];
 
     // Media and file entities require special handling to identify matches.
+    // @todo Add tests for media and file content.
     $media_test = [];
     $file_test = [];
 
-    // Nodes should match regularly based on availalbe property data.
-    // Test an available match.
+    // Nodes should match regularly based on available property data.
+    // @todo Test node existence checks with an available match.
     $node_match_test = [];
-    // Test no match found.
+    // @todo Test node existence checks without an available match.
     $node_no_match_test = [];
 
     return [
       $paragraph_test,
-//      $media_test,
-//      $file_test,
-//      $node_match_test,
-//      $node_no_match_test,
+      // $media_test,
+      // $file_test,
+      // $node_match_test,
+      // $node_no_match_test,
     ];
   }
 
