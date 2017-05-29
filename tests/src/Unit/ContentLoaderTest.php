@@ -98,14 +98,18 @@ class ContentLoaderTest extends UnitTestCase {
   /**
    * Prepare an abstract Entity mock object.
    *
+   * @param string $entity_type
+   *   The machine name for the entity type being mocked.
+   *
    * @return \PHPUnit_Framework_MockObject_MockObject
    *   A mock entity object.
    *
    * @see \Drupal\Tests\views\Unit\Plugin\area\EntityTest::setUp()
    *
    * @todo Extend to accept configuration for available and missing fields.
+   * @todo Tie into field map and type definition mocking.
    */
-  protected function getEntityMock(array $defined_fields = []) {
+  protected function getEntityMock($entity_type, array $defined_fields = []) {
     $mock_entity = $this->getMockForAbstractClass(
       'Drupal\Core\Entity\ContentEntityInterface',
       [],
@@ -123,7 +127,9 @@ class ContentLoaderTest extends UnitTestCase {
     // Mock the hasField() method.
     $mock_entity->expects($this->any())
       ->method('hasField')
-      ->willReturn(TRUE);
+      ->willReturnCallback(function ($field_name) use ($entity_type) {
+        return array_key_exists($field_name, $this->fieldMap[$entity_type]);
+      });
 
     return $mock_entity;
   }
@@ -439,7 +445,7 @@ class ContentLoaderTest extends UnitTestCase {
     // Prepare a mock entity to be created with stubbed methods.
     // @todo Expand this or add additional tests for missing field assignments.
     // @todo Expand this to confirm the correct field list is being passed to populateField().
-    $entity_mock = $this->getEntityMock();
+    $entity_mock = $this->getEntityMock($entity_type);
     $entity_mock->method('hasField')
       ->willReturn(TRUE);
 
@@ -484,7 +490,7 @@ class ContentLoaderTest extends UnitTestCase {
     $this->configStorage
       ->expects($this->once())
       ->method('create')
-      ->willReturn($this->getEntityMock());
+      ->willReturn($this->getEntityMock($entity_type));
 
     $this->contentLoader->buildEntity($entity_type, $test_content);
   }
@@ -511,7 +517,7 @@ class ContentLoaderTest extends UnitTestCase {
     $this->contentLoader
       ->expects($this->once())
       ->method('entityExists')
-      ->willReturn($this->getEntityMock());
+      ->willReturn($this->getEntityMock($entity_type));
 
     // Since the entity exists one should never be created.
     $this->configStorage
@@ -553,7 +559,7 @@ class ContentLoaderTest extends UnitTestCase {
     $this->configStorage
       ->expects($this->once())
       ->method('create')
-      ->willReturn($this->getEntityMock());
+      ->willReturn($this->getEntityMock($entity_type));
 
     // Trigger the method for testing with the test data.
     $this->contentLoader->buildEntity($entity_type, $test_content);
