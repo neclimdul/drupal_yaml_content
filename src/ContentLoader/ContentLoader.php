@@ -9,8 +9,6 @@ use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Field\EntityReferenceFieldItemList;
 use Drupal\Core\Field\FieldException;
 use Drupal\Core\TypedData\Exception\MissingDataException;
-use Drupal\node\Entity\Node;
-use Drupal\taxonomy\Entity\Term;
 use Symfony\Component\Yaml\Parser;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -23,6 +21,9 @@ use Drupal\yaml_content\Event\EntityImportEvent;
 
 /**
  * ContentLoader class for parsing and importing YAML content.
+ *
+ * @todo Refactor to implement ContainerInjectionInterface.
+ * @todo Refactor to use a separate static helper service.
  */
 class ContentLoader implements ContentLoaderInterface {
 
@@ -109,6 +110,9 @@ class ContentLoader implements ContentLoaderInterface {
     $this->entityFieldManager = $entity_field_manager;
     $this->moduleHandler = $module_handler;
     $this->dispatcher = $dispatcher;
+
+    // Default to creating new entities on import.
+    $this->existenceCheck = FALSE;
   }
 
   /**
@@ -132,10 +136,15 @@ class ContentLoader implements ContentLoaderInterface {
    * Set the whether or not the system should check for previous demo content.
    *
    * @param bool $existence_check
-   *   The true/false value of existence check.
+   *   The true/false value of existence check. Defaults to true if no value
+   *   is provided.
+   *
+   * @return $this
    */
-  public function setExistenceCheck($existence_check) {
+  public function setExistenceCheck($existence_check = TRUE) {
     $this->existenceCheck = $existence_check;
+
+    return $this;
   }
 
   /**
@@ -143,6 +152,7 @@ class ContentLoader implements ContentLoaderInterface {
    */
   public function parseContent($content_file) {
     $file = $this->path . '/content/' . $content_file;
+    // @todo Handle missing files gracefully.
     $this->parsedContent = $this->parser->parse(file_get_contents($file));
 
     // Never leave this as null, even on a failed parsing process.
@@ -211,13 +221,11 @@ class ContentLoader implements ContentLoaderInterface {
    * @todo Use entity type information to more accurately identify attributes.
    * @todo Potentially move this into a separate helper service class.
    */
-  protected function identityAttributeType(EntityTypeInterface $entity_definition, $key) {
+  protected function identifyAttributeType(EntityTypeInterface $entity_definition, $key) {
     // Load the list of fields defined for the entity type.
     // @todo Add validation that the entity type is listed here.
     $field_map = $this->entityFieldManager->getFieldMap();
     $field_list = $field_map[$entity_definition->id()];
-
-    $attribute_type = '';
 
     if ($entity_definition->hasKey($key)) {
       $attribute_type = 'property';
@@ -254,11 +262,14 @@ class ContentLoader implements ContentLoaderInterface {
     $entity_import_event = new EntityImportEvent($this, $entity_definition, $content_data);
     $this->dispatcher->dispatch(YamlContentEvents::IMPORT_ENTITY, $entity_import_event);
 
-    // Verify required content data.
     // Parse properties for creation and fields for processing.
-    $attributes = [];
+    $attributes = [
+      'property' => [],
+      'field' => [],
+      'other' => [],
+    ];
     foreach ($content_data as $key => $data) {
-      $type = $this->identityAttributeType($entity_definition, $key);
+      $type = $this->identifyAttributeType($entity_definition, $key);
 
       // Process simple values as properties for initial creation.
       if ($type == 'field' && !is_array($data)) {
@@ -322,7 +333,7 @@ class ContentLoader implements ContentLoaderInterface {
    *
    * @todo Handle field data types more dynamically with typed data.
    */
-  protected function populateField($field, array &$field_data) {
+  public function populateField($field, array &$field_data) {
     // Get the field cardinality to determine whether or not a value should be
     // 'set' or 'appended' to.
     $cardinality = $field->getFieldDefinition()
@@ -420,10 +431,16 @@ class ContentLoader implements ContentLoaderInterface {
    *
    * @param object $field
    *   The entity field object.
-   * @param array $field_data
+   * @param array|string $field_data
    *   The field data.
    */
-  protected function preprocessFieldData($field, array &$field_data) {
+  protected function preprocessFieldData($field, &$field_data) {
+    // Break here if the field data is not an array since there can be no
+    // processing instructions included.
+    if (!is_array($field_data)) {
+      return;
+    }
+
     // Check for a callback processor defined at the value level.
     if (isset($field_data['#process']) && isset($field_data['#process']['callback'])) {
       $callback_type = $field_data['#process']['callback'];
@@ -482,16 +499,8 @@ class ContentLoader implements ContentLoaderInterface {
     $entity_ids = $query->execute();
 
     if (empty($entity_ids)) {
-      if ($entity_type == 'taxonomy_term') {
-        $term = Term::create($filter_params);
-        $term->save();
-        $entity_ids = [$term->id()];
-      }
-      elseif ($entity_type == 'node') {
-        $node = Node::create($filter_params);
-        $node->save();
-        $entity_ids = [$node->id()];
-      }
+      $entity = $this->entityTypeManager->getStorage($entity_type)->create();
+      $entity_ids = [$entity->id()];
     }
 
     if (empty($entity_ids)) {
@@ -583,14 +592,14 @@ class ContentLoader implements ContentLoaderInterface {
    *
    * @return \Drupal\Core\Entity\EntityInterface|false
    *   Return a matching entity if one is found, or FALSE otherwise.
+   *
+   * @todo Potentially move this into a separate helper class.
    */
-  protected function entityExists($entity_type, array $content_data) {
-    // Load entity type handler.
-    $entity_handler = $this->entityTypeManager->getStorage($entity_type);
-
+  public function entityExists($entity_type, array $content_data) {
     // Some entities require special handling to determine if it exists.
     switch ($entity_type) {
       // Always create new paragraphs since they're not reusable.
+      // @todo Should new revisions be incorporated here?
       case 'paragraph':
         break;
 
@@ -599,6 +608,10 @@ class ContentLoader implements ContentLoaderInterface {
         break;
 
       default:
+        // Load entity type handler.
+        $entity_handler = $this->entityTypeManager->getStorage($entity_type);
+
+        // @todo Load this through dependency injection instead.
         $query = \Drupal::entityQuery($entity_type);
         foreach ($content_data as $key => $value) {
           if ($key != 'entity' && !is_array($value)) {
