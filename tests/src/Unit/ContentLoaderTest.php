@@ -198,6 +198,32 @@ class ContentLoaderTest extends UnitTestCase {
   }
 
   /**
+   * @param array $methods
+   *   An array of method names to leave active on the mock object. All other
+   *   declared methods on the ContentLoader class will be stubbed.
+   *
+   * @return \PHPUnit_Framework_MockObject_MockObject
+   *   The mocked ContentLoader object.
+   */
+  protected function getContentLoaderMock($methods = []) {
+    // Methods to be stubbed in the mock.
+    // All methods except the ones excluded in the array below will be stubbed.
+    $stub_methods = array_diff(get_class_methods(ContentLoader::class), $methods);
+
+    // Partially mock the ContentLoader for testing specific methods.
+    $this->contentLoader = $this->getMockBuilder(ContentLoader::class)
+      ->setConstructorArgs([
+        $this->getEntityTypeManagerMock(),
+        $this->getEntityFieldManagerMock(),
+        $this->getModuleHandlerMock(),
+      ])
+      ->setMethods($stub_methods)
+      ->getMock();
+
+    return $this->contentLoader;
+  }
+
+  /**
    * Create a test file with specified contents for testing.
    *
    * @param string $filename
@@ -329,15 +355,13 @@ class ContentLoaderTest extends UnitTestCase {
    * Test general behavior of the parseContent() method.
    *
    * @see \Drupal\yaml_content\ContentLoader\ContentLoader::parseContent()
+   *
+   * @todo Test if $contentPath is not set
+   * @todo Handle parse failure
+   * @todo Test no array at top level of content
+   * @todo Confirm array structure loaded
    */
   public function testParseContent() {
-    // @todo Test if $contentPath is not set
-    // @todo Confirm `$path/content/$content_file` is loaded
-    // @todo Confirm `/$content_file` is not loaded
-    // @todo Handle parse failure
-    // @todo Test no array at top level of content
-    // @todo Confirm array structure loaded
-
     $this->markTestIncomplete();
   }
 
@@ -397,22 +421,15 @@ class ContentLoaderTest extends UnitTestCase {
   public function setupBuildEntityTests($entity_type = '') {
     // Methods to be stubbed in the mock.
     // All methods except the ones excluded in the array below will be stubbed.
-    $stub_methods = array_diff(get_class_methods(ContentLoader::class), [
+    $test_methods = [
       'buildEntity',
       'categorizeEntityFieldsAndProperties',
       'setExistenceCheck',
       'existenceCheck',
-    ]);
+    ];
 
     // Partially mock the ContentLoader for testing specific methods.
-    $this->contentLoader = $this->getMockBuilder(ContentLoader::class)
-      ->setConstructorArgs([
-        $this->getEntityTypeManagerMock(),
-        $this->getEntityFieldManagerMock(),
-        $this->getModuleHandlerMock(),
-      ])
-      ->setMethods($stub_methods)
-      ->getMock();
+    $this->contentLoader = $this->getContentLoaderMock($test_methods);
 
     // Load entity type definition into mock services.
     if (array_key_exists($entity_type, $this->testEntityDefinitions)) {
@@ -656,7 +673,7 @@ class ContentLoaderTest extends UnitTestCase {
     $actual = $this->contentLoader->entityExists($entity_type, $content_data);
 
     $this->assertEquals($expected, $actual);
-//    $this->markTestIncomplete();
+    $this->markTestIncomplete();
   }
 
   /**
