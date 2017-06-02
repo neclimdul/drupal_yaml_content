@@ -11,6 +11,13 @@ use Drupal\Core\Field\FieldException;
 use Drupal\Core\TypedData\Exception\MissingDataException;
 use Symfony\Component\Yaml\Parser;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Drupal\yaml_content\Event\YamlContentEvents;
+use Drupal\yaml_content\Event\ContentParsedEvent;
+use Drupal\yaml_content\Event\EntityPreSaveEvent;
+use Drupal\yaml_content\Event\EntityPostSaveEvent;
+use Drupal\yaml_content\Event\FieldImportEvent;
+use Drupal\yaml_content\Event\EntityImportEvent;
 
 /**
  * ContentLoader class for parsing and importing YAML content.
@@ -40,6 +47,13 @@ class ContentLoader implements ContentLoaderInterface {
    * @var \Drupal\Core\Extension\ModuleHandlerInterface
    */
   protected $moduleHandler;
+
+  /**
+   * Event dispatcher service to report events throughout the loading process.
+   *
+   * @var \Symfony\Component\EventDispatcher\EventDispatcherInterface
+   */
+  protected $dispatcher;
 
   /**
    * YAML parser.
@@ -85,14 +99,17 @@ class ContentLoader implements ContentLoaderInterface {
    *   Entity field manager service.
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $module_handler
    *   Drupal module handler service.
+   * @param \Symfony\Component\EventDispatcher\EventDispatcherInterface $dispatcher
+   *   An event dispatcher service to publish events throughout the process.
    *
    * @todo Fetch parser via dependency injection.
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, ModuleHandlerInterface $module_handler) {
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, ModuleHandlerInterface $module_handler, EventDispatcherInterface $dispatcher) {
     $this->parser = new Parser();
     $this->entityTypeManager = $entity_type_manager;
     $this->entityFieldManager = $entity_field_manager;
     $this->moduleHandler = $module_handler;
+    $this->dispatcher = $dispatcher;
 
     // Default to creating new entities on import.
     $this->existenceCheck = FALSE;
@@ -142,6 +159,10 @@ class ContentLoader implements ContentLoaderInterface {
     // @todo Output a warning for empty content files or failed parsing.
     $this->parsedContent = isset($this->parsedContent) ? $this->parsedContent : [];
 
+    // Dispatch the event notification.
+    $content_parsed_event = new ContentParsedEvent($this, $this->contentFile, $this->parsedContent);
+    $this->dispatcher->dispatch(YamlContentEvents::CONTENT_PARSED, $content_parsed_event);
+
     return $this->parsedContent;
   }
 
@@ -157,7 +178,17 @@ class ContentLoader implements ContentLoaderInterface {
     // Create each entity defined in the yml content.
     foreach ($content_data as $content_item) {
       $entity = $this->buildEntity($content_item['entity'], $content_item);
+
+      // Dispatch the pre-save event.
+      $entity_pre_save_event = new EntityPreSaveEvent($this, $entity, $content_item);
+      $this->dispatcher->dispatch(YamlContentEvents::ENTITY_PRE_SAVE, $entity_pre_save_event);
+
       $entity->save();
+
+      // Dispatch the post-save event.
+      $entity_post_save_event = new EntityPostSaveEvent($this, $entity, $content_item);
+      $this->dispatcher->dispatch(YamlContentEvents::ENTITY_POST_SAVE, $entity_post_save_event);
+
       $loaded_content[] = $entity;
     }
 
@@ -227,6 +258,10 @@ class ContentLoader implements ContentLoaderInterface {
     // Load entity type handler.
     $entity_handler = $this->entityTypeManager->getStorage($entity_type);
 
+    // Dispatch the entity import event.
+    $entity_import_event = new EntityImportEvent($this, $entity_definition, $content_data);
+    $this->dispatcher->dispatch(YamlContentEvents::IMPORT_ENTITY, $entity_import_event);
+
     // Parse properties for creation and fields for processing.
     $attributes = [
       'property' => [],
@@ -266,6 +301,10 @@ class ContentLoader implements ContentLoaderInterface {
       try {
         if ($entity->hasField($field_name)) {
           $field_instance = $entity->get($field_name);
+
+          // Dispatch field import event prior to populating fields.
+          $field_import_event = new FieldImportEvent($this, $entity, $field_instance, $field_data);
+          $this->dispatcher->dispatch(YamlContentEvents::IMPORT_FIELD, $field_import_event);
 
           $this->populateField($field_instance, $field_data);
         }
@@ -409,7 +448,7 @@ class ContentLoader implements ContentLoaderInterface {
       if (isset($field_data['#process']['dependency'])) {
         $dependency = $field_data['#process']['dependency'];
         // @todo Implement ContainerInjectionInterface to statically instantiate a new loader.
-        $process_dependency = new ContentLoader($this->entityTypeManager, $this->entityFieldManager, $this->moduleHandler);
+        $process_dependency = new ContentLoader($this->entityTypeManager, $this->entityFieldManager, $this->moduleHandler, $this->dispatcher);
         $process_dependency->setContentPath($this->path);
         $process_dependency->loadContent($dependency, $this->existenceCheck());
       }

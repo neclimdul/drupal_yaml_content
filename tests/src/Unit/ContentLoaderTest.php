@@ -41,6 +41,13 @@ class ContentLoaderTest extends UnitTestCase {
   protected $moduleHandler;
 
   /**
+   * The mocked EventDispatcher service.
+   *
+   * @var \PHPUnit_Framework_MockObject_MockObject
+   */
+  protected $dispatcherMock;
+
+  /**
    * The prepared root directory of the virtual file system.
    *
    * @var \org\bovigo\vfs\vfsStreamDirectory
@@ -131,6 +138,15 @@ class ContentLoaderTest extends UnitTestCase {
         return array_key_exists($field_name, $this->fieldMap[$entity_type]);
       });
 
+    // Mock the get() method.
+    $mock_entity->expects($this->any())
+      ->method('get')
+      ->willReturnCallback(function ($field_name) {
+        $item_list_mock = $this->getMockForAbstractClass('Drupal\Core\Field\FieldItemListInterface');
+
+        return $item_list_mock;
+      });
+
     return $mock_entity;
   }
 
@@ -198,6 +214,18 @@ class ContentLoaderTest extends UnitTestCase {
   }
 
   /**
+   * Get the mock event dispatcher service.
+   *
+   * @return \PHPUnit_Framework_MockObject_MockObject
+   *   The mocked EventDispatcher service.
+   */
+  protected function getDispatcherMock() {
+    $this->dispatcherMock = $this->getMockForAbstractClass('\Symfony\Component\EventDispatcher\EventDispatcherInterface');
+
+    return $this->dispatcherMock;
+  }
+
+  /**
    * @param array $methods
    *   An array of method names to leave active on the mock object. All other
    *   declared methods on the ContentLoader class will be stubbed.
@@ -216,6 +244,7 @@ class ContentLoaderTest extends UnitTestCase {
         $this->getEntityTypeManagerMock(),
         $this->getEntityFieldManagerMock(),
         $this->getModuleHandlerMock(),
+        $this->getDispatcherMock(),
       ])
       ->setMethods($stub_methods)
       ->getMock();
@@ -292,8 +321,10 @@ class ContentLoaderTest extends UnitTestCase {
     $this->entityFieldManager = $this->getEntityFieldManagerMock();
     // Mock the ModuleHandler.
     $this->moduleHandler = $this->getModuleHandlerMock();
+    // Mock the EventDispatcher.
+    $this->dispatcherMock = $this->getDispatcherMock();
 
-    $this->contentLoader = new ContentLoader($this->entityTypeManager, $this->entityFieldManager, $this->moduleHandler);
+    $this->contentLoader = new ContentLoader($this->entityTypeManager, $this->entityFieldManager, $this->moduleHandler, $this->dispatcherMock);
   }
 
   /**
