@@ -499,7 +499,7 @@ class ContentLoader implements ContentLoaderInterface {
     $entity_ids = $query->execute();
 
     if (empty($entity_ids)) {
-      $entity = $this->entityTypeManager->getStorage($entity_type)->create();
+      $entity = $this->entityTypeManager->getStorage($entity_type)->create($filter_params);
       $entity_ids = [$entity->id()];
     }
 
