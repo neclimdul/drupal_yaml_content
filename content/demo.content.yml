@@ -16,15 +16,16 @@
   status: 1
   # Rich text fields contain multiple keys that must be provided.
   body:
-    format: "full_html"
-    # Using a pipe we can define content across multiple lines.
-    value: |
-      <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vobis
-      voluptatum perceptarum recordatio vitam beatam facit, et quidem corpore
-      perceptarum. Tum Quintus: Est plane, Piso, ut dicis, inquit.</p>
-      <p>Primum cur ista res digna odio est, nisi quod est turpis? Duo Reges:
-      constructio interrete. Rhetorice igitur, inquam, nos mavis quam
-      dialectice disputare?</p>
+    # The format may be the machine name of any configured text filter.
+    - format: "full_html"
+      # Using a pipe we can define content across multiple lines.
+      value: |
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vobis
+        voluptatum perceptarum recordatio vitam beatam facit, et quidem corpore
+        perceptarum. Tum Quintus: Est plane, Piso, ut dicis, inquit.</p>
+        <p>Primum cur ista res digna odio est, nisi quod est turpis? Duo Reges:
+        constructio interrete. Rhetorice igitur, inquam, nos mavis quam
+        dialectice disputare?</p>
 
 # Articles may also be more complex and include referenced content like tags.
 - entity: "node"
@@ -32,14 +33,15 @@
   title: "Tagged Article"
   status: 1
   body:
-    format: "full_html"
-    # Using a pipe we can define content across multiple lines.
-    value: |
-      <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vobis
-      voluptatum perceptarum recordatio vitam beatam facit, et quidem corpore
-      perceptarum. Tum Quintus: Est plane, Piso, ut dicis, inquit.Primum cur
-      ista res digna odio est, nisi quod est turpis? Duo Reges: constructio
-      interrete. Rhetorice igitur, inquam, nos mavis quam dialectice disputare?</p>
+    # The format may be the machine name of any configured text filter.
+    - format: "full_html"
+      # Using a pipe we can define content across multiple lines.
+      value: |
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vobis
+        voluptatum perceptarum recordatio vitam beatam facit, et quidem corpore
+        perceptarum. Tum Quintus: Est plane, Piso, ut dicis, inquit.Primum cur
+        ista res digna odio est, nisi quod est turpis? Duo Reges: constructio
+        interrete. Rhetorice igitur, inquam, nos mavis quam dialectice disputare?</p>
   # Since the tags to be used were created above, we don't know their IDs and have to look them up dynamically.
   field_tags:
     # This is done via a preprocessor.
@@ -68,14 +70,15 @@
   title: "Article with an Image"
   status: 1
   body:
-    format: "full_html"
-    # Using a pipe we can define content across multiple lines.
-    value: |
-      <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vobis
-      voluptatum perceptarum recordatio vitam beatam facit, et quidem corpore
-      perceptarum. Tum Quintus: Est plane, Piso, ut dicis, inquit.Primum cur
-      ista res digna odio est, nisi quod est turpis? Duo Reges: constructio
-      interrete. Rhetorice igitur, inquam, nos mavis quam dialectice disputare?</p>
+    # The format may be the machine name of any configured text filter.
+    - format: "full_html"
+      # Using a pipe we can define content across multiple lines.
+      value: |
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vobis
+        voluptatum perceptarum recordatio vitam beatam facit, et quidem corpore
+        perceptarum. Tum Quintus: Est plane, Piso, ut dicis, inquit.Primum cur
+        ista res digna odio est, nisi quod est turpis? Duo Reges: constructio
+        interrete. Rhetorice igitur, inquam, nos mavis quam dialectice disputare?</p>
   field_tags:
     - '#process':
         callback: 'reference'
