@@ -98,6 +98,7 @@ function drush_yaml_content_import_module($module, $file = NULL) {
   // Identify files for import.
   $mask = '/' . (isset($file) ? $file : '.*') . '\.content\.yml/';
   $files = drush_yaml_content_discover_files($path . '/content', $mask);
+  ksort($files);
 
   _drush_yaml_content_import_files($loader, $files);
 }
