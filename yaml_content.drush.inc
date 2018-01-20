@@ -7,8 +7,6 @@
  * @todo Re-implement as universal command compatible with Drupal console.
  */
 
-use Drupal\yaml_content\ContentLoader\ContentLoaderInterface;
-
 /**
  * Implements hook_drush_command().
  */
@@ -63,16 +61,12 @@ function yaml_content_drush_command() {
  *   (Optional) The name of a file to be imported or an array of files to
  *   import. If this argument is not provided then all files in the directory
  *   matching `*.content.yml` are queued for import.
+ *
+ * @see \Drupal\yaml_content\Service\LoadHelper::importDirectory()
  */
 function drush_yaml_content_import($directory, $file = NULL) {
-  $loader = \Drupal::service('yaml_content.content_loader');
-  $loader->setContentPath($directory);
-
-  // Identify files for import.
-  $mask = '/' . (isset($file) ? $file : '.*') . '\.content\.yml/';
-  $files = drush_yaml_content_discover_files($directory . '/content', $mask);
-
-  _drush_yaml_content_import_files($loader, $files);
+  $load_helper = \Drupal::service('yaml_content.load_helper');
+  $load_helper->importDirectory($directory, $file);
 }
 
 /**
@@ -88,19 +82,12 @@ function drush_yaml_content_import($directory, $file = NULL) {
  *   (Optional) The name of a file to be imported or an array of files to
  *   import. If this argument is not provided then all files in the directory
  *   matching `*.content.yml` are queued for import.
+ *
+ * @see \Drupal\yaml_content\Service\LoadHelper::importModule()
  */
 function drush_yaml_content_import_module($module, $file = NULL) {
-  $path = drupal_get_path('module', $module);
-
-  $loader = \Drupal::service('yaml_content.content_loader');
-  $loader->setContentPath($path);
-
-  // Identify files for import.
-  $mask = '/' . (isset($file) ? $file : '.*') . '\.content\.yml/';
-  $files = drush_yaml_content_discover_files($path . '/content', $mask);
-  ksort($files);
-
-  _drush_yaml_content_import_files($loader, $files);
+  $load_helper = \Drupal::service('yaml_content.load_helper');
+  $load_helper->importModule($module, $file);
 }
 
 /**
@@ -110,75 +97,17 @@ function drush_yaml_content_import_module($module, $file = NULL) {
  *   The profile to look for content files within.
  *
  *   This command assumes files will be contained within a `content/` directory
- *   at the top of the module's main directory. Any files within matching the
+ *   at the top of the profiles's main directory. Any files within matching the
  *   pattern `*.content.yml` will then be imported.
  * @param string|string[] $file
  *   (Optional) The name of a file to be imported or an array of files to
  *   import. If this argument is not provided then all files in the directory
  *   matching `*.content.yml` are queued for import.
+ *
+ * @see \Drupal\yaml_content\Service\LoadHelper::importProfile()
  */
 function drush_yaml_content_import_profile($profile, $file = NULL) {
-  $path = drupal_get_path('profile', $profile);
-
-  $loader = \Drupal::service('yaml_content.content_loader');
-  $loader->setContentPath($path);
-
-  // Identify files for import.
-  $mask = '/' . (isset($file) ? $file : '.*') . '\.content\.yml/';
-  $files = drush_yaml_content_discover_files($path . '/content', $mask);
-
-  _drush_yaml_content_import_files($loader, $files);
+  $load_helper = \Drupal::service('yaml_content.load_helper');
+  $load_helper->importProfile($profile, $file);
 }
 
-/**
- * Scan and discover content files for import.
- *
- * The scanner assumes all content files will follow the naming convention of
- * '*.content.yml'.
- *
- * @param string $path
- *   The directory path to be scanned for content files.
- * @param string $mask
- *   (Optional) A file name mask to limit matches in scanned files.
- *
- * @return array
- *   An associative array of objects keyed by filename with the following
- *   properties as returned by file_scan_directory():
- *
- *   - 'uri'
- *   - 'filename'
- *   - 'name'
- *
- * @see file_scan_directory()
- */
-function drush_yaml_content_discover_files($path, $mask = '/.*\.content\.yml/') {
-  // Identify files for import.
-  $files = file_scan_directory($path, $mask, [
-    'key' => 'filename',
-    'recurse' => FALSE,
-  ]);
-
-  return $files;
-}
-
-/**
- * Import content files using a Content Loader.
- *
- * @param \Drupal\yaml_content\ContentLoader\ContentLoaderInterface $loader
- *   The content loader to use to import the referenced files.
- * @param array $files
- *   An array of file descriptors as loaded by file_scan_directory() keyed by
- *   filename. Each of the listed files will be imported.
- */
-function _drush_yaml_content_import_files(ContentLoaderInterface $loader, array $files) {
-  // @todo Verify files before loading for import.
-  foreach ($files as $filename => $file) {
-    drush_print(dt('Importing content: @file', [
-      '@file' => $filename,
-    ]));
-    $loaded = $loader->loadContent($filename);
-    drush_print(dt('Imported @count items', [
-      '@count' => count($loaded),
-    ]));
-  }
-}
