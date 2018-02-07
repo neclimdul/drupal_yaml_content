@@ -144,6 +144,9 @@ class LoadHelper {
       'recurse' => FALSE,
     ]);
 
+    // Sort the files to ensure consistent sequence during imports.
+    ksort($files);
+
     return $files;
   }
 
