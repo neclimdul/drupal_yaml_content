@@ -77,6 +77,22 @@ class NodeImportTest extends BrowserTestBase {
     $this->assertEquals('article', $entity->bundle(), 'An article Node was not correctly created.');
     $this->assertEquals('Basic Article', $entity->label(), 'An article\'s title was not correctly assigned.');
 
+    // Confirm body field content.
+    $body_value = $entity->get('body')->get(0)->getValue();
+    $this->assertEquals('full_html', $body_value['format'], 'Body field format was not correctly assigned to "full_html".');
+
+    $expected_content = <<<END_OF_VALUE
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vobis
+voluptatum perceptarum recordatio vitam beatam facit, et quidem corpore
+perceptarum. Tum Quintus: Est plane, Piso, ut dicis, inquit.</p>
+<p>Primum cur ista res digna odio est, nisi quod est turpis? Duo Reges:
+constructio interrete. Rhetorice igitur, inquam, nos mavis quam
+dialectice disputare?</p>
+
+END_OF_VALUE;
+
+    $this->assertEquals($expected_content, $body_value['value'], 'Body field content was not correctly assigned.');
+
     return $entity;
   }
 
