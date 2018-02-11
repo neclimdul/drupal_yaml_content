@@ -35,7 +35,7 @@ interface ContentLoaderInterface {
    *   located within a directory set by `setPath()`.
    *
    * @return array
-   *   An array of generated entity Ids.
+   *   An array of created entities.
    */
   public function loadContent($content_file);
 
