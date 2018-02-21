@@ -18,6 +18,7 @@ use Drupal\yaml_content\Event\EntityPreSaveEvent;
 use Drupal\yaml_content\Event\EntityPostSaveEvent;
 use Drupal\yaml_content\Event\FieldImportEvent;
 use Drupal\yaml_content\Event\EntityImportEvent;
+use Drupal\Component\Render\PlainTextOutput;
 
 /**
  * ContentLoader class for parsing and importing YAML content.
@@ -504,18 +505,7 @@ class ContentLoader implements ContentLoaderInterface {
     }
 
     if (empty($entity_ids)) {
-      // Build parameter output description for error message.
-      $error_params = [
-        '[',
-        '  "entity_type" => ' . $entity_type . ',',
-      ];
-      foreach ($filter_params as $key => $value) {
-        $error_params[] = sprintf("  '%s' => '%s',", $key, $value);
-      }
-      $error_params[] = ']';
-      $param_output = implode("\n", $error_params);
-
-      throw new MissingDataException(__CLASS__ . ': Unable to find referenced content: ' . $param_output);
+      return $this->throwParamError('Unable to find referenced content', $entity_type, $filter_params);
     }
 
     // Use the first match for our value.
@@ -556,8 +546,22 @@ class ContentLoader implements ContentLoaderInterface {
     }
     $output = file_get_contents($this->path . $directory . $filename);
     if ($output !== FALSE) {
-      // Save the file data. Do not overwrite files if they already exist.
-      $file = file_save_data($output, 'public://' . $filename, FILE_EXISTS_RENAME);
+      $destination = 'public://';
+      // Look-up the field's directory configuation.
+      if ($directory = $field->getSetting('file_directory')) {
+        $directory = trim($directory, '/');
+        $directory = PlainTextOutput::renderFromHtml(\Drupal::token()->replace($directory));
+        if ($directory) {
+          $destination .= $directory . '/';
+        }
+      }
+
+      // Create the destination directory if it does not already exist.
+      file_prepare_directory($destination, FILE_CREATE_DIRECTORY);
+
+      // Save the file data or return an existing file.
+      $file = file_save_data($output, $destination . $filename, FILE_EXISTS_REPLACE);
+
       // Use the newly created file id as the value.
       $field_data['target_id'] = $file->id();
 
@@ -567,18 +571,7 @@ class ContentLoader implements ContentLoaderInterface {
       return $file->id();
     }
     else {
-      // Build parameter output description for error message.
-      $error_params = [
-        '[',
-        '  "entity_type" => ' . $entity_type . ',',
-      ];
-      foreach ($filter_params as $key => $value) {
-        $error_params[] = sprintf("  '%s' => '%s',", $key, $value);
-      }
-      $error_params[] = ']';
-      $param_output = implode("\n", $error_params);
-
-      throw new MissingDataException(__CLASS__ . ': Unable to process file content: ' . $param_output);
+      return $this->throwParamError('Unable to process file content', $entity_type, $filter_params);
     }
   }
 
@@ -629,4 +622,28 @@ class ContentLoader implements ContentLoaderInterface {
     return isset($entity) ? $entity : FALSE;
   }
 
+  /**
+   * Prepare an error message and throw error.
+   *
+   * @param string $error_message
+   *   The error message to display.
+   * @param string $entity_type
+   *   The entity type.
+   * @param array $filter_params
+   *   The filters for the query conditions.
+   */
+  protected function throwParamError($error_message, $entity_type, array $filter_params) {
+    // Build parameter output description for error message.
+    $error_params = [
+      '[',
+      '  "entity_type" => ' . $entity_type . ',',
+    ];
+    foreach ($filter_params as $key => $value) {
+      $error_params[] = sprintf("  '%s' => '%s',", $key, $value);
+    }
+    $error_params[] = ']';
+    $param_output = implode("\n", $error_params);
+
+    throw new MissingDataException(__CLASS__ . ': ' . $error_message . ': ' . $param_output);
+  }
 }
