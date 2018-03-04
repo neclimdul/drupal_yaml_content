@@ -2,10 +2,12 @@
 
 namespace Drupal\yaml_content\ContentLoader;
 
+use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
+
 /**
  * Interface for loading and parsing content from YAML files.
  */
-interface ContentLoaderInterface {
+interface ContentLoaderInterface extends ContainerInjectionInterface {
 
   /**
    * Set a path prefix for all content files to be loaded from.
