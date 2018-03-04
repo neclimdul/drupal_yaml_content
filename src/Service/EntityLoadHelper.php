@@ -2,19 +2,20 @@
 
 namespace Drupal\yaml_content\Service;
 
-use Drupal\Core\Entity\EntityFieldManagerInterface;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Logger\LoggerChannelInterface;
-use Drupal\Core\StringTranslation\StringTranslationTrait;
-use Drupal\Core\StringTranslation\TranslationInterface;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * A helper class to support identification and loading of existing entities.
  */
-class EntityLoadHelper {
+class EntityLoadHelper implements ContainerInjectionInterface {
 
-  use StringTranslationTrait;
+  /**
+   * Dependency injection container.
+   *
+   * @var \Symfony\Component\DependencyInjection\ContainerInterface $container
+   */
+  protected $container;
 
   /**
    * The entity type manager interface.
@@ -29,20 +30,6 @@ class EntityLoadHelper {
    * @var \Drupal\Core\Entity\EntityFieldManagerInterface
    */
   protected $entityFieldManager;
-
-  /**
-   * Event dispatcher service to report events throughout the loading process.
-   *
-   * @var \Symfony\Component\EventDispatcher\EventDispatcherInterface
-   */
-  protected $dispatcher;
-
-  /**
-   * The logging channel for recording import events.
-   *
-   * @var $logger
-   */
-  protected $logger;
 
   /**
    * @const array REQUIRES_SPECIAL_HANDLING
@@ -60,27 +47,54 @@ class EntityLoadHelper {
   ];
 
   /**
-   * Constructs the load helper service.
+   * Constructs the entity load helper service.
    *
-   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
-   *   Entity type manager.
-   * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entity_field_manager
-   *   Entity field manager service.
-   * @param \Symfony\Component\EventDispatcher\EventDispatcherInterface $dispatcher
-   *   An event dispatcher service to publish events throughout the process.
-   * @param \Drupal\Core\Logger\LoggerChannelInterface $logger
-   *   The logging channel for recording import events.
-   * @param \Drupal\Core\StringTranslation\TranslationInterface $translation
-   *   String translation service for message logging.
+   * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
+   *   The dependency injection container to laod dependent services.
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, EventDispatcherInterface $dispatcher, LoggerChannelInterface $logger, TranslationInterface $translation) {
+  public function __construct(ContainerInterface $container) {
+    $this->container = $container;
+  }
 
-    $this->entityTypeManager = $entity_type_manager;
-    $this->entityFieldManager = $entity_field_manager;
-    $this->dispatcher = $dispatcher;
-    $this->logger = $logger;
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container
+    );
+  }
 
-    $this->setStringTranslation($translation);
+  /**
+   * Get the EntityTypeManager service.
+   *
+   * @return \Drupal\Core\Entity\EntityTypeManagerInterface
+   *   The EntityTypeManager service.
+   */
+  public function getEntityTypeManager() {
+    // Lazy load the entity type manager service.
+    if (!isset($this->entityTypeManager)) {
+      $this->entityTypeManager = $this->container
+        ->get('entity_type.manager');
+    }
+
+    return $this->entityTypeManager;
+  }
+
+  /**
+   * Get the entity field manager service.
+   *
+   * @return \Drupal\Core\Entity\EntityFieldManagerInterface
+   *   The entity field manager service.
+   */
+  public function getEntityFieldManager() {
+    // Lazy load the entity field manager service.
+    if (!isset($this->entityFieldManager)) {
+      $this->entityFieldManager = $this->container
+        ->get('entity_field.manager');
+    }
+
+    return $this->entityFieldManager;
   }
 
   /**
@@ -140,8 +154,8 @@ class EntityLoadHelper {
    * @return \Drupal\Core\Entity\EntityInterface|false
    */
   public function loadByUuid($entity_type, $uuid) {
-    // Load the entity type handler.
-    $entity_handler = $this->entityTypeManager->getStorage($entity_type);
+    // Load the entity type storage handler.
+    $entity_handler = $this->getEntityStorage($entity_type);
 
     // Load by searching only for the `uuid` property.
     $entities = $entity_handler->loadByProperties(['uuid' => $uuid]);
@@ -172,13 +186,29 @@ class EntityLoadHelper {
       return FALSE;
     }
 
-    // Load the entity type handler.
-    $entity_handler = $this->entityTypeManager->getStorage($entity_type);
+    // Load the entity type storage handler.
+    $entity_handler = $this->getEntityStorage($entity_type);
 
     $properties = $this->extractContentProperties($entity_type, $content_data);
 
     $entity_ids = $entity_handler->loadByProperties($properties);
+
     return reset($entity_ids);
+  }
+
+  /**
+   * Load an entity storage handler.
+   *
+   * @param string $entity_type
+   *   The entity type id of the definition to load.
+   *
+   * @return \Drupal\Core\Entity\EntityStorageInterface
+   *   The storage handler service for the entity type.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   */
+  protected function getEntityStorage($entity_type) {
+    return $this->getEntityTypeManager()->getStorage($entity_type);
   }
 
   /**
@@ -210,7 +240,7 @@ class EntityLoadHelper {
    *   The entity type definition or NULL if it could not be loaded.
    */
   protected function getEntityDefinition($entity_type) {
-    return $this->entityTypeManager->getDefinition($entity_type);
+    return $this->getEntityTypeManager()->getDefinition($entity_type);
   }
 
   /**
@@ -298,7 +328,7 @@ class EntityLoadHelper {
    *   The map of fields mapped for the given entity type.
    */
   protected function getEntityFields($entity_type) {
-    $field_map = $this->entityFieldManager->getFieldMap();
+    $field_map = $this->getEntityFieldManager()->getFieldMap();
     return $field_map[$entity_type];
   }
 

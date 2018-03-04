@@ -10,13 +10,9 @@ services:
       - '@logger.channel.yaml_content'
       - '@string_translation'
   yaml_content.entity_load_helper:
-      class: Drupal\yaml_content\Service\EntityLoadHelper
-      arguments:
-        - '@entity_type.manager'
-        - '@entity_field.manager'
-        - '@event_dispatcher'
-        - '@logger.channel.yaml_content'
-        - '@string_translation'
+    class: Drupal\yaml_content\Service\EntityLoadHelper
+    arguments:
+      - '@service_container'
   logger.channel.yaml_content:
     parent: logger.channel_base
     arguments:
