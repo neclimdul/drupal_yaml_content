@@ -32,15 +32,16 @@ class EntityLoadHelper implements ContainerInjectionInterface {
   protected $entityFieldManager;
 
   /**
-   * @const array REQUIRES_SPECIAL_HANDLING
-   *   An array of entity type machine names that require special handling.
+   * An array of entity type machine names that require special handling.
    *
    * The entity types listed in this array cannot be loaded and treated the same
    * as other entity types and require special attention.
    *
+   * @var string[] $requiresSpecialHandling
+   *
    * @see https://www.drupal.org/project/yaml_content/issues/2893055
    */
-  const REQUIRES_SPECIAL_HANDLING = [
+  protected static $requiresSpecialHandling = [
     'paragraph',
     'media',
     'file',
@@ -167,7 +168,7 @@ class EntityLoadHelper implements ContainerInjectionInterface {
    * Load an existing entity by property data.
    *
    * Some entity types require special handling and will be handled uniquely.
-   * @see \Drupal\yaml_content\Service\EntityLoadHelper::REQUIRES_SPECIAL_HANDLING
+   * @see \Drupal\yaml_content\Service\EntityLoadHelper::$requiresSpecialHandling
    *
    * @param string $entity_type
    *   The type of entity being imported.
@@ -181,7 +182,7 @@ class EntityLoadHelper implements ContainerInjectionInterface {
 
     // Address entities requiring special handling separately.
     // [#2893055] Until this is resolved, these entities are not loaded.
-    if (in_array($entity_type, $this::REQUIRES_SPECIAL_HANDLING)) {
+    if (in_array($entity_type, $this::$requiresSpecialHandling)) {
       // @todo Add system to process these entities specifically.
       return FALSE;
     }
