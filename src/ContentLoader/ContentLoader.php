@@ -96,7 +96,7 @@ class ContentLoader implements ContentLoaderInterface {
    * ContentLoader constructor.
    *
    * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
-   *   The dependency injection container to laod dependent services.
+   *   The dependency injection container to load dependent services.
    */
   public function __construct(ContainerInterface $container) {
     $this->container = $container;
