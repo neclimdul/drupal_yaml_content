@@ -11,6 +11,22 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class EntityLoadHelper implements ContainerInjectionInterface {
 
   /**
+   * An array of entity type machine names that require special handling.
+   *
+   * The entity types listed in this array cannot be loaded and treated the same
+   * as other entity types and require special attention.
+   *
+   * @var string[] $requiresSpecialHandling
+   *
+   * @see https://www.drupal.org/project/yaml_content/issues/2893055
+   */
+  protected static $requiresSpecialHandling = [
+    'paragraph',
+    'media',
+    'file',
+  ];
+
+  /**
    * Dependency injection container.
    *
    * @var \Symfony\Component\DependencyInjection\ContainerInterface $container
@@ -32,22 +48,6 @@ class EntityLoadHelper implements ContainerInjectionInterface {
   protected $entityFieldManager;
 
   /**
-   * An array of entity type machine names that require special handling.
-   *
-   * The entity types listed in this array cannot be loaded and treated the same
-   * as other entity types and require special attention.
-   *
-   * @var string[] $requiresSpecialHandling
-   *
-   * @see https://www.drupal.org/project/yaml_content/issues/2893055
-   */
-  protected static $requiresSpecialHandling = [
-    'paragraph',
-    'media',
-    'file',
-  ];
-
-  /**
    * Constructs the entity load helper service.
    *
    * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
@@ -64,38 +64,6 @@ class EntityLoadHelper implements ContainerInjectionInterface {
     return new static(
       $container
     );
-  }
-
-  /**
-   * Get the EntityTypeManager service.
-   *
-   * @return \Drupal\Core\Entity\EntityTypeManagerInterface
-   *   The EntityTypeManager service.
-   */
-  public function getEntityTypeManager() {
-    // Lazy load the entity type manager service.
-    if (!isset($this->entityTypeManager)) {
-      $this->entityTypeManager = $this->container
-        ->get('entity_type.manager');
-    }
-
-    return $this->entityTypeManager;
-  }
-
-  /**
-   * Get the entity field manager service.
-   *
-   * @return \Drupal\Core\Entity\EntityFieldManagerInterface
-   *   The entity field manager service.
-   */
-  public function getEntityFieldManager() {
-    // Lazy load the entity field manager service.
-    if (!isset($this->entityFieldManager)) {
-      $this->entityFieldManager = $this->container
-        ->get('entity_field.manager');
-    }
-
-    return $this->entityFieldManager;
   }
 
   /**
@@ -165,9 +133,41 @@ class EntityLoadHelper implements ContainerInjectionInterface {
   }
 
   /**
+   * Load an entity storage handler.
+   *
+   * @param string $entity_type
+   *   The entity type id of the definition to load.
+   *
+   * @return \Drupal\Core\Entity\EntityStorageInterface
+   *   The storage handler service for the entity type.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   */
+  protected function getEntityStorage($entity_type) {
+    return $this->getEntityTypeManager()->getStorage($entity_type);
+  }
+
+  /**
+   * Get the EntityTypeManager service.
+   *
+   * @return \Drupal\Core\Entity\EntityTypeManagerInterface
+   *   The EntityTypeManager service.
+   */
+  protected function getEntityTypeManager() {
+    // Lazy load the entity type manager service.
+    if (!isset($this->entityTypeManager)) {
+      $this->entityTypeManager = $this->container
+        ->get('entity_type.manager');
+    }
+
+    return $this->entityTypeManager;
+  }
+
+  /**
    * Load an existing entity by property data.
    *
    * Some entity types require special handling and will be handled uniquely.
+   *
    * @see \Drupal\yaml_content\Service\EntityLoadHelper::$requiresSpecialHandling
    *
    * @param string $entity_type
@@ -177,6 +177,8 @@ class EntityLoadHelper implements ContainerInjectionInterface {
    *
    * @return \Drupal\Core\Entity\EntityInterface|false
    *   Return a matching entity if one is found, or FALSE otherwise.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    */
   public function loadByProperties($entity_type, array $content_data) {
 
@@ -198,21 +200,6 @@ class EntityLoadHelper implements ContainerInjectionInterface {
   }
 
   /**
-   * Load an entity storage handler.
-   *
-   * @param string $entity_type
-   *   The entity type id of the definition to load.
-   *
-   * @return \Drupal\Core\Entity\EntityStorageInterface
-   *   The storage handler service for the entity type.
-   *
-   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
-   */
-  protected function getEntityStorage($entity_type) {
-    return $this->getEntityTypeManager()->getStorage($entity_type);
-  }
-
-  /**
    * Identify entity properties from content data.
    *
    * @param $entity_type
@@ -229,19 +216,6 @@ class EntityLoadHelper implements ContainerInjectionInterface {
     $attributes = $this->categorizeAttributes($entity_type, $content_data);
 
     return $attributes['property'];
-  }
-
-  /**
-   * Load an entity type definition.
-   *
-   * @param $entity_type
-   *   The entity type ID.
-   *
-   * @return \Drupal\Core\Entity\EntityTypeInterface|null
-   *   The entity type definition or NULL if it could not be loaded.
-   */
-  protected function getEntityDefinition($entity_type) {
-    return $this->getEntityTypeManager()->getDefinition($entity_type);
   }
 
   /**
@@ -331,6 +305,35 @@ class EntityLoadHelper implements ContainerInjectionInterface {
   protected function getEntityFields($entity_type) {
     $field_map = $this->getEntityFieldManager()->getFieldMap();
     return $field_map[$entity_type];
+  }
+
+  /**
+   * Get the entity field manager service.
+   *
+   * @return \Drupal\Core\Entity\EntityFieldManagerInterface
+   *   The entity field manager service.
+   */
+  protected function getEntityFieldManager() {
+    // Lazy load the entity field manager service.
+    if (!isset($this->entityFieldManager)) {
+      $this->entityFieldManager = $this->container
+        ->get('entity_field.manager');
+    }
+
+    return $this->entityFieldManager;
+  }
+
+  /**
+   * Load an entity type definition.
+   *
+   * @param $entity_type
+   *   The entity type ID.
+   *
+   * @return \Drupal\Core\Entity\EntityTypeInterface|null
+   *   The entity type definition or NULL if it could not be loaded.
+   */
+  protected function getEntityDefinition($entity_type) {
+    return $this->getEntityTypeManager()->getDefinition($entity_type);
   }
 
 }
