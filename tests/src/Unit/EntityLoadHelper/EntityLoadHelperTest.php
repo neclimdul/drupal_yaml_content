@@ -2,6 +2,8 @@
 
 namespace Drupal\Tests\yaml_content\Unit\EntityLoadHelper;
 
+use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Tests\UnitTestCase;
 use Drupal\yaml_content\Service\EntityLoadHelper;
 
@@ -36,20 +38,12 @@ class EntityLoadHelperTest extends UnitTestCase {
    */
   protected function getEntityLoadHelperMock($stubbed_methods = NULL) {
     // Partially mock the ContentLoader for testing specific methods.
-    $this->contentLoader = $this->getMockBuilder(EntityLoadHelper::class)
+    $mock = $this->getMockBuilder(EntityLoadHelper::class)
       ->disableOriginalConstructor()
       ->setMethods($stubbed_methods)
       ->getMock();
 
-    return $this->loadHelper;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function setUp() {
-    parent::setUp();
-
+    return $mock;
   }
 
   /**
@@ -71,12 +65,51 @@ class EntityLoadHelperTest extends UnitTestCase {
   }
 
   /**
+   * Test entityExists uses content data to load matching entities.
+   *
+   * @covers ::entityExists
+   * @covers ::loadEntity
+   */
+  public function testEntityExistsAttemptsToLoadEntity() {
+    $this->loadHelper = $this->getEntityLoadHelperMock([
+      'loadEntity',
+    ]);
+
+    // Prepare arguments to be tested.
+    $entity_type = 'text_entity';
+    $content_data = [
+      'entity' => 'test_entity',
+      'type' => 'tester',
+      'name' => 'Test Entity',
+    ];
+
+    // Prepare expectations.
+    $this->loadHelper->expects($this->once())
+      ->method('loadEntity')
+      ->with(
+        $entity_type,
+        $content_data
+      );
+
+    // Execute the method.
+    $this->loadHelper->entityExists($entity_type, $content_data);
+  }
+
+  /**
    * Test entityExists method returns true when an entity is loaded.
    *
    * @covers ::entityExists
    */
   public function testEntityExistsReturnsTrueWhenAnEntityIsLoaded() {
-    $this->markTestIncomplete('This test has not been implemented yet.');
+    // Mock the load helper for testing.
+    $this->loadHelper = $this->getEntityLoadHelperMock([
+      'loadEntity',
+    ]);
+
+    $this->loadHelper->method('loadEntity')
+      ->willReturn($this->getEntityMock());
+
+    $this->assertTrue($this->loadHelper->entityExists('test_entity', []));
   }
 
   /**
@@ -85,25 +118,245 @@ class EntityLoadHelperTest extends UnitTestCase {
    * @covers ::entityExists
    */
   public function testEntityExistsReturnsFalseWhenAnEntityIsNotLoaded() {
-    $this->markTestIncomplete('This test has not been implemented yet.');
+    // Mock the load helper for testing.
+    $this->loadHelper = $this->getEntityLoadHelperMock([
+      'loadEntity',
+    ]);
+
+    $this->loadHelper->method('loadEntity')
+      ->willReturn(FALSE);
+
+    $this->assertFalse($this->loadHelper->entityExists('test_entity', []));
   }
 
   /**
-   * Test that an entity is searched by UUID first if one is provided.
+   * An entity is searched by UUID first if one is provided.
    *
    * @covers ::loadEntity
    */
   public function testLoadEntityLoadsUuidFirstIfAvailable() {
-    $this->markTestIncomplete('This test has not been implemented yet.');
+    $this->loadHelper = $this->getEntityLoadHelperMock([
+      'loadByUuid',
+      'loadByProperties',
+    ]);
+
+    // Prepare the parameters.
+    $entity_type = 'test_entity';
+    $content_data = [
+      'entity' => 'test_entity',
+      // Include a UUID property.
+      'uuid' => '3c6485e4-69a3-429d-8ab1-3e7df48747bc'
+    ];
+
+    $this->loadHelper->expects($this->once())
+      ->method('loadByUuid')
+      ->with(
+        $entity_type,
+        $content_data['uuid']
+      );
+
+    // Execute the method.
+    $this->loadHelper->loadEntity($entity_type, $content_data);
   }
 
   /**
-   * Test that an entity is searched by properties if no UUID is defined.
+   * An entity is not searched by properties if UUID is provided.
+   *
+   * @covers ::loadEntity
+   */
+  public function testLoadEntityDoesntSearchTwiceIfUuidIsProvided() {
+    $this->loadHelper = $this->getEntityLoadHelperMock([
+      'loadByUuid',
+      'loadByProperties',
+    ]);
+
+    // Prepare the parameters.
+    $entity_type = 'test_entity';
+    $content_data = [
+      'entity' => 'test_entity',
+      // Include a UUID property.
+      'uuid' => '3c6485e4-69a3-429d-8ab1-3e7df48747bc'
+    ];
+
+    $this->loadHelper->expects($this->never())
+      ->method('loadByProperties');
+
+    // Execute the method.
+    $this->loadHelper->loadEntity($entity_type, $content_data);
+  }
+
+  /**
+   * An entity is not searched by UUID if no UUID is provided.
+   *
+   * @covers ::loadEntity
+   */
+  public function testLoadEntityDoesntSearchTwiceIfNoUuidIsProvided() {
+    $this->loadHelper = $this->getEntityLoadHelperMock([
+      'loadByUuid',
+      'loadByProperties',
+    ]);
+
+    // Prepare the parameters.
+    $entity_type = 'test_entity';
+    // Do not include a UUID property.
+    $content_data = [
+      'entity' => 'test_entity',
+    ];
+
+    $this->loadHelper->expects($this->never())
+      ->method('loadByUuid');
+
+    // Execute the method.
+    $this->loadHelper->loadEntity($entity_type, $content_data);
+  }
+
+  /**
+   * An entity is searched by properties if no UUID is defined.
    *
    * @covers ::loadEntity
    */
   public function testLoadEntityLoadsByPropertiesIfUuidIsUnavailable() {
-    $this->markTestIncomplete('This test has not been implemented yet.');
+    $this->loadHelper = $this->getEntityLoadHelperMock([
+      'loadByUuid',
+      'loadByProperties',
+    ]);
+
+    // Prepare the parameters.
+    $entity_type = 'test_entity';
+    // Do not include a UUID property.
+    $content_data = [
+      'entity' => 'test_entity',
+    ];
+
+    $this->loadHelper->expects($this->once())
+      ->method('loadByProperties')
+      ->with(
+        $entity_type,
+        $content_data
+      );
+
+    // Execute the method.
+    $this->loadHelper->loadEntity($entity_type, $content_data);
+  }
+
+  /**
+   * Test that loadEntity returns false if UUID searching returned no matches.
+   *
+   * @covers ::loadEntity
+   */
+  public function testLoadEntityWithUuidReturnsFalseWithNoMatches() {
+    $this->loadHelper = $this->getEntityLoadHelperMock([
+      'loadByUuid',
+      'loadByProperties',
+    ]);
+
+    // Prepare the parameters.
+    $entity_type = 'test_entity';
+    $content_data = [
+      'entity' => 'test_entity',
+      // Include a UUID property.
+      'uuid' => '3c6485e4-69a3-429d-8ab1-3e7df48747bc'
+    ];
+
+    // Mock that loadByUuid found no matches.
+    $this->loadHelper->method('loadByUuid')
+      ->willReturn(FALSE);
+
+    // Execute the method.
+    $actual = $this->loadHelper->loadEntity($entity_type, $content_data);
+
+    // Confirm the return value.
+    $this->assertFalse($actual);
+  }
+
+  /**
+   * Test that loadEntity returns matched entity if UUID searching returned a match.
+   *
+   * @covers ::loadEntity
+   */
+  public function testLoadEntityWithUuidReturnsMatchedEntity() {
+    $this->loadHelper = $this->getEntityLoadHelperMock([
+      'loadByUuid',
+      'loadByProperties',
+    ]);
+
+    // Prepare the parameters.
+    $entity_type = 'test_entity';
+    $content_data = [
+      'entity' => 'test_entity',
+      // Include a UUID property.
+      'uuid' => '3c6485e4-69a3-429d-8ab1-3e7df48747bc'
+    ];
+
+    // Mock that loadByUuid found a match.
+    $matched_entity = $this->getEntityMock();
+    $this->loadHelper->method('loadByUuid')
+      ->willReturn($matched_entity);
+
+    // Execute the method.
+    $actual = $this->loadHelper->loadEntity($entity_type, $content_data);
+
+    // Confirm the return value.
+    $this->assertSame($matched_entity, $actual);
+  }
+
+  /**
+   * Test that loadEntity returns false if property searching returned no matches.
+   *
+   * @covers ::loadEntity
+   */
+  public function testLoadEntityWithPropertiesReturnsFalseWithNoMatches() {
+    $this->loadHelper = $this->getEntityLoadHelperMock([
+      'loadByUuid',
+      'loadByProperties',
+    ]);
+
+    // Prepare the parameters.
+    $entity_type = 'test_entity';
+    // Do not include a UUID property.
+    $content_data = [
+      'entity' => 'test_entity',
+    ];
+
+    // Mock that loadByProperties found no matches.
+    $this->loadHelper->method('loadByProperties')
+      ->willReturn(FALSE);
+
+    // Execute the method.
+    $actual = $this->loadHelper->loadEntity($entity_type, $content_data);
+
+    // Confirm the return value.
+    $this->assertFalse($actual);
+  }
+
+  /**
+   * Test that loadEntity returns matched entity if property searching returned a match.
+   *
+   * @covers ::loadEntity
+   */
+  public function testLoadEntityWithPropertiesdReturnsMatchedEntity() {
+    $this->loadHelper = $this->getEntityLoadHelperMock([
+      'loadByUuid',
+      'loadByProperties',
+    ]);
+
+    // Prepare the parameters.
+    $entity_type = 'test_entity';
+    // Do not include a UUID property.
+    $content_data = [
+      'entity' => 'test_entity',
+    ];
+
+    // Mock that loadByProperties found a match.
+    $matched_entity = $this->getEntityMock();
+    $this->loadHelper->method('loadByProperties')
+      ->willReturn($matched_entity);
+
+    // Execute the method.
+    $actual = $this->loadHelper->loadEntity($entity_type, $content_data);
+
+    // Confirm the return value.
+    $this->assertSame($matched_entity, $actual);
   }
 
   /**
@@ -185,6 +438,28 @@ class EntityLoadHelperTest extends UnitTestCase {
    */
   public function testCategorizeAttributesSortsAsExpected() {
     $this->markTestIncomplete('This test has not been implemented yet.');
+  }
+
+  /**
+   * Get a mock for an entity storage handler.
+   *
+   * @return \PHPUnit_Framework_MockObject_MockObject|EntityStorageInterface
+   */
+  protected function getEntityStorageMock() {
+    $mock = $this->getMockForAbstractClass(EntityStorageInterface::class);
+
+    return $mock;
+  }
+
+  /**
+   * Get a mock for an entity.
+   *
+   * @return \PHPUnit_Framework_MockObject_MockObject|ContentEntityInterface
+   */
+  protected function getEntityMock() {
+    $mock = $this->getMockForAbstractClass(ContentEntityInterface::class);
+
+    return $mock;
   }
 
 }
