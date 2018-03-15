@@ -3,8 +3,10 @@
 namespace Drupal\Tests\yaml_content\Unit\EntityLoadHelper;
 
 use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\ContentEntityTypeInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Tests\UnitTestCase;
+use Drupal\Tests\yaml_content\Traits\LoadFixturesTrait;
 use Drupal\yaml_content\Service\EntityLoadHelper;
 
 /**
@@ -14,6 +16,8 @@ use Drupal\yaml_content\Service\EntityLoadHelper;
  * @group yaml_content
  */
 class EntityLoadHelperTest extends UnitTestCase {
+
+  use LoadFixturesTrait;
 
   /**
    * A prepared EntityLoadHelper object for testing.
@@ -419,25 +423,167 @@ class EntityLoadHelperTest extends UnitTestCase {
    * @covers ::extractContentProperties
    */
   public function testExtractContentPropertiesOnlyReturnsProperties() {
-    $this->markTestIncomplete('This test has not been implemented yet.');
+    $this->loadHelper = $this->getEntityLoadHelperMock([
+      'categorizeAttributes',
+    ]);
+
+    // Prepare the parameters.
+    $entity_type = 'test_entity';
+    // Do not include a UUID property.
+    $content_data = [
+      'entity' => 'test_entity',
+      'type' => 'test_bundle',
+      'status' => '1',
+      'field_title' => 'Test Title',
+    ];
+
+    // Mock the categorizeAttributes return value.
+    $results = [
+      'property' => [
+        'entity' => 'test_entity',
+        'type' => 'test_bundle',
+        'status' => '1',
+      ],
+      'field' => [
+        'field_title' => 'Test Title',
+      ],
+      'other' => [],
+    ];
+    $this->loadHelper->method('categorizeAttributes')
+      ->willReturn($results);
+
+    // Execute the method.
+    $actual = $this->loadHelper->extractContentProperties($entity_type, $content_data);
+
+    // Confirm the return value.
+    $this->assertSame($results['property'], $actual);
   }
 
   /**
    * Test categorizeAttributes always returns three attribute categories.
    *
    * @covers ::categorizeAttributes
+   * @covers ::identifyAttributeType
+   *
+   * @dataProvider attributeCategorizationProvider
    */
-  public function testCategorizeAttributesAlwaysReturnsThreeKeys() {
-    $this->markTestIncomplete('This test has not been implemented yet.');
+  public function testCategorizeAttributesAlwaysReturnsThreeKeys($entity_type, $content, $expected) {
+    $this->setUpCategorizeAttributesTests();
+
+    // Execute the method.
+    $actual = $this->loadHelper->categorizeAttributes($entity_type, $content);
+
+    // Confirm the returned keys.
+    $this->assertSame(array_keys($expected), array_keys($actual), 'categorizeAttributes method did not return the expected keys.');
   }
 
   /**
-   * Test categorizeAttributes sorts attributes as expected.
+   * Test categorizeAttributes identifies properties as expected.
    *
    * @covers ::categorizeAttributes
+   * @covers ::identifyAttributeType
+   *
+   * @dataProvider attributeCategorizationProvider
    */
-  public function testCategorizeAttributesSortsAsExpected() {
-    $this->markTestIncomplete('This test has not been implemented yet.');
+  public function testCategorizeAttributesProperlyIdentifiesProperties($entity_type, $content, $expected) {
+    $this->setUpCategorizeAttributesTests();
+
+    // Execute the method.
+    $actual = $this->loadHelper->categorizeAttributes($entity_type, $content);
+
+    $this->assertArrayEquals($expected['property'], $actual['property']);
+  }
+
+  /**
+   * Test categorizeAttributes identifies fields as expected.
+   *
+   * @covers ::categorizeAttributes
+   * @covers ::identifyAttributeType
+   *
+   * @dataProvider attributeCategorizationProvider
+   */
+  public function testCategorizeAttributesProperlyIdentifiesFields($entity_type, $content, $expected) {
+    $this->setUpCategorizeAttributesTests();
+
+    // Execute the method.
+    $actual = $this->loadHelper->categorizeAttributes($entity_type, $content);
+
+    $this->assertArrayEquals($expected['field'], $actual['field']);
+  }
+
+  /**
+   * Test categorizeAttributes identifies "other" attributes as expected.
+   *
+   * @covers ::categorizeAttributes
+   * @covers ::identifyAttributeType
+   *
+   * @dataProvider attributeCategorizationProvider
+   */
+  public function testCategorizeAttributesProperlyIdentifiesOther($entity_type, $content, $expected) {
+    $this->setUpCategorizeAttributesTests();
+
+    // Execute the method.
+    $actual = $this->loadHelper->categorizeAttributes($entity_type, $content);
+
+    $this->assertArrayEquals($expected['other'], $actual['other']);
+  }
+
+  /**
+   * Data provider to test attribute categorization.
+   */
+  public function attributeCategorizationProvider() {
+    $fixture = $this->loadFixtureContent('attribute_categorization.assertions');
+
+    $assertions = [];
+    foreach ($fixture as $assertion) {
+      $assertions[] = [
+        $assertion['entity_type'],
+        $assertion['content'],
+        $assertion['expected'],
+      ];
+    }
+
+    return $assertions;
+  }
+
+  /**
+   * Get a mocked entity definition.
+   *
+   * @param string $entity_type
+   *   The identifier for the entity type definition being mocked.
+   *
+   * @return \PHPUnit_Framework_MockObject_MockObject|ContentEntityTypeInterface
+   *   The mock for the entity definition.
+   */
+  public function getEntityDefinition($entity_type) {
+    $definition = $this->loadFixtureContent('entity_definitions', [$entity_type]);
+
+    $mock = $this->getMockForAbstractClass(ContentEntityTypeInterface::class);
+
+    $mock->method('hasKey')
+      ->willReturnCallback(function ($key) use ($definition) {
+        return in_array($key, $definition['entity_keys']);
+      });
+
+    $mock->method('getKeys')
+      ->willReturn($definition['entity_keys']);
+
+    return $mock;
+  }
+
+  /**
+   * Load fixture data for mapped entity fields.
+   *
+   * @param $entity_type
+   *   The identifier for the entity type field list being loaded.
+   *
+   * @return array
+   *   An array of fields for the specified entity type.
+   */
+  public function getEntityFields($entity_type) {
+    $field_map = $this->loadFixtureContent('field_list', [$entity_type]);
+
+    return $field_map;
   }
 
   /**
@@ -460,6 +606,24 @@ class EntityLoadHelperTest extends UnitTestCase {
     $mock = $this->getMockForAbstractClass(ContentEntityInterface::class);
 
     return $mock;
+  }
+
+  /**
+   * Prepare the EntityLoadHelper mock for testing categorizeAttributes.
+   */
+  protected function setUpCategorizeAttributesTests() {
+    $this->loadHelper = $this->getEntityLoadHelperMock([
+      'getEntityFields',
+      'getEntityDefinition',
+    ]);
+
+    // Mock the getEntityFields return value.
+    $this->loadHelper->method('getEntityFields')
+      ->willReturnCallback([$this, 'getEntityFields']);
+
+    // Mock the getEntityDefinition return value.
+    $this->loadHelper->method('getEntityDefinition')
+      ->willReturnCallback([$this, 'getEntityDefinition']);
   }
 
 }
