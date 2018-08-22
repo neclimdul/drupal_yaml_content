@@ -24,3 +24,9 @@ services:
     class: Drupal\yaml_content\EventSubscriber\MenuHierarchySubscriber
     tags:
       - {name: event_subscriber}
+  yaml_content.event_subscriber.node_links:
+    class: Drupal\yaml_content\EventSubscriber\NodeLinkEventSubscriber
+    tags:
+      - {name: event_subscriber}
+    arguments:
+    - '@plugin.manager.yaml_content.process'
