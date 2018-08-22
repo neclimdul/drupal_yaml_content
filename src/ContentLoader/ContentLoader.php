@@ -318,15 +318,9 @@ class ContentLoader implements ContentLoaderInterface {
   }
 
   /**
-   * Internal helper for encapsulating entity save process.
-   *
-   * @param array $content_item
-   *   A single entry from a content source.
-   *
-   * @return \Drupal\Core\Entity\EntityInterface
-   * @throws \Drupal\Core\Entity\EntityStorageException
+   * {@inheritdoc}
    */
-  protected function saveEntity(array $content_item) {
+  public function saveEntity(array $content_item) {
     // Separate out entity type so we can use it discreetly going forward.
     $entity_type = $content_item['entity'];
     unset($content_item['entity']);
@@ -417,12 +411,6 @@ class ContentLoader implements ContentLoaderInterface {
 
     // Preprocess the field data.
     $this->getProcessManager()->preprocessFieldData($context, $attribute_data);
-
-    // Check if the field is a reference field. If so, build the entity ref.
-    $is_reference = isset($attribute_data['entity']);
-    if ($is_reference) {
-      $attribute_data = $this->saveEntity($attribute_data);
-    }
   }
 
   /**
