@@ -107,6 +107,7 @@ class ReferenceTest extends UnitTestCase {
 
     // Stub an existing entity since entities are complex and db bound.
     $entity = $this->prophesize(EntityInterface::class);
+    $entity->save()->willReturn(NULL);
     $entity->id()->willReturn(2);
 
     // Create should not be called.

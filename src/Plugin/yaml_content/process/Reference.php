@@ -78,6 +78,7 @@ class Reference extends YamlContentProcessBase implements YamlContentProcessInte
 
     if (empty($entity_ids)) {
       $entity = $entity_storage->create($filter_params);
+      $entity->save();
       $entity_ids = [$entity->id()];
     }
 

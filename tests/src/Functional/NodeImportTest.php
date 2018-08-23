@@ -116,7 +116,7 @@ END_OF_VALUE;
     $tags = $node->get('field_tags');
     $this->assertEquals(['target_id' => $tag->id()], $tags->get(0)
       ->getValue(), 'Existing tag is connected.');
-    $this->assertNull($tags->get(1), 'Missing tag is not created.');
+    $this->assertNotNull($tags->get(1), 'Missing tag in reference is created.');
 
     $this->assertEquals('1', $this->loadMenuId($node), 'Menu entry created.');
     $menu1 = MenuLinkContentEntity::load($this->loadMenuId($entities[2]));
