@@ -157,6 +157,7 @@ class ExistenceCheckingTest extends ContentLoaderTestBase {
     $this->contentLoader = $this->getContentLoaderMock([
       'getContentAttributes',
       'getEntityStorage',
+      'entityExists',
     ]);
 
     // Ensure existence checking should be disabled.
