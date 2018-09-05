@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\yaml_content\Kernel;
+namespace Drupal\Tests\yaml_content\Functional;
 
 use Drupal\node\NodeInterface;
 use Drupal\Tests\BrowserTestBase;
