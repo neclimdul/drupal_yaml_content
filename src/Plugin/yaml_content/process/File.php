@@ -34,7 +34,11 @@ class File extends YamlContentProcessBase implements YamlContentProcessInterface
     // TODO path not set.
     $output = file_get_contents($context->getContentLoader()->getContentPath() . $directory . $filename);
     if ($output !== FALSE) {
-      $destination = 'public://';
+      // Lookup the field scheme.
+      $scheme = $context->getField()->getSetting('uri_scheme');
+      $scheme = $scheme ? $scheme : 'public';
+      $destination = $scheme . '://';
+
       // Look-up the field's directory configuation.
       if ($directory = $context->getField()->getSetting('file_directory')) {
         $directory = trim($directory, '/');
