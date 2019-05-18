@@ -1,4 +1,7 @@
 services:
+  plugin.manager.yaml_content.process:
+    class: Drupal\yaml_content\Plugin\YamlContentProcessManager
+    arguments: ['@container.namespaces', '@cache.discovery', '@module_handler']
   yaml_content.content_loader:
     class: Drupal\yaml_content\ContentLoader\ContentLoader
     arguments:

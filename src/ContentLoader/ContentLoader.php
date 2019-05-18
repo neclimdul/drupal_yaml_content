@@ -2,11 +2,12 @@
 
 namespace Drupal\yaml_content\ContentLoader;
 
-use Drupal\Core\Config\ConfigValueException;
+use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\Field\EntityReferenceFieldItemList;
 use Drupal\Core\Field\FieldException;
 use Drupal\Core\TypedData\Exception\MissingDataException;
+use Drupal\yaml_content\Plugin\ProcessingContext;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Yaml\Parser;
 use Drupal\yaml_content\Event\YamlContentEvents;
@@ -15,7 +16,6 @@ use Drupal\yaml_content\Event\EntityPreSaveEvent;
 use Drupal\yaml_content\Event\EntityPostSaveEvent;
 use Drupal\yaml_content\Event\FieldImportEvent;
 use Drupal\yaml_content\Event\EntityImportEvent;
-use Drupal\Component\Render\PlainTextOutput;
 
 /**
  * ContentLoader class for parsing and importing YAML content.
@@ -25,7 +25,7 @@ class ContentLoader implements ContentLoaderInterface {
   /**
    * Dependency injection container.
    *
-   * @var \Symfony\Component\DependencyInjection\ContainerInterface $container
+   * @var \Symfony\Component\DependencyInjection\ContainerInterface
    */
   protected $container;
 
@@ -93,6 +93,11 @@ class ContentLoader implements ContentLoaderInterface {
   protected $contentFile;
 
   /**
+   * @var \Drupal\yaml_content\Plugin\YamlContentProcessManager
+   */
+  protected $processManager;
+
+  /**
    * ContentLoader constructor.
    *
    * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
@@ -158,6 +163,22 @@ class ContentLoader implements ContentLoaderInterface {
   }
 
   /**
+   * Get the ProcessManager service.
+   *
+   * @return \Drupal\yaml_content\Plugin\YamlContentProcessManager
+   *   The ProcessManager service.
+   */
+  protected function getProcessManager() {
+    // Lazy load the entity load helper service.
+    if (!isset($this->processManager)) {
+      $this->processManager = $this->container
+        ->get('plugin.manager.yaml_content.process');
+    }
+
+    return $this->processManager;
+  }
+
+  /**
    * Get the module handler service.
    *
    * @return \Drupal\Core\Extension\ModuleHandlerInterface
@@ -194,6 +215,13 @@ class ContentLoader implements ContentLoaderInterface {
    */
   public function setContentPath($path) {
     $this->path = $path;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getContentPath() {
+    return $this->path;
   }
 
   /**
@@ -435,7 +463,7 @@ class ContentLoader implements ContentLoaderInterface {
       catch (MissingDataException $exception) {
         watchdog_exception('yaml_content', $exception);
       }
-      catch (ConfigValueException $exception) {
+      catch (PluginNotFoundException $exception) {
         watchdog_exception('yaml_content', $exception);
       }
     }
@@ -497,8 +525,15 @@ class ContentLoader implements ContentLoaderInterface {
 
     // Iterate over each field data value and process it.
     foreach ($field_data as &$item_data) {
+      if (isset($field_data['#process']['dependency'])) {
+        $dependency = $field_data['#process']['dependency'];
+        $this->processDependency($dependency);
+      }
       // Preprocess the field data.
-      $this->preprocessFieldData($field, $item_data);
+      $context = new ProcessingContext();
+      $context->setField($field);
+      $context->setContentLoader($this);
+      $this->getProcessManager()->preprocessFieldData($context, $item_data);
 
       // Check if the field is a reference field. If so, build the entity ref.
       $is_reference = isset($item_data['entity']);
@@ -525,66 +560,6 @@ class ContentLoader implements ContentLoaderInterface {
   }
 
   /**
-   * Run any designated preprocessors on the provided field data.
-   *
-   * Preprocessors are expected to be provided in the following format:
-   *
-   * ```yaml
-   *   '#process':
-   *     callback: '<callback string>'
-   *     args:
-   *       - <callback argument 1>
-   *       - <callback argument 2>
-   *       - <...>
-   * ```
-   *
-   * The callback function receives the following arguments:
-   *
-   *   - `$field`
-   *   - `$field_data`
-   *   - <callback argument 1>
-   *   - <callback argument 2>
-   *   - <...>
-   *
-   * The `$field_data` array is passed by reference and may be modified directly
-   * by the callback implementation.
-   *
-   * @param object $field
-   *   The entity field object.
-   * @param array|string $field_data
-   *   The field data.
-   */
-  protected function preprocessFieldData($field, &$field_data) {
-    // Break here if the field data is not an array since there can be no
-    // processing instructions included.
-    if (!is_array($field_data)) {
-      return;
-    }
-
-    // Check for a callback processor defined at the value level.
-    if (isset($field_data['#process']) && isset($field_data['#process']['callback'])) {
-      $callback_type = $field_data['#process']['callback'];
-      $process_method = $callback_type . 'EntityLoad';
-      if (isset($field_data['#process']['dependency'])) {
-        $dependency = $field_data['#process']['dependency'];
-        $this->processDependency($dependency);
-      }
-      // Check to see if this class has a method in the format of
-      // '{fieldType}EntityLoad'.
-      if (method_exists($this, $process_method)) {
-        // Append callback arguments to field object and value data.
-        $args = array_merge([$field, &$field_data], isset($field_data['#process']['args']) ? $field_data['#process']['args'] : []);
-        // Pass in the arguments and call the method.
-        call_user_func_array([$this, $process_method], $args);
-      }
-      // If the method does not exist, throw an exception.
-      else {
-        throw new ConfigValueException('Unknown type specified: ' . $callback_type);
-      }
-    }
-  }
-
-  /**
    * Process a file flagged as a dependency.
    *
    * @param string $dependency
@@ -594,114 +569,6 @@ class ContentLoader implements ContentLoaderInterface {
     $sub_loader = self::create($this->container);
     $sub_loader->setContentPath($this->path);
     $sub_loader->loadContent($dependency, $this->existenceCheck());
-  }
-
-  /**
-   * Processor function for querying and loading a referenced entity.
-   *
-   * @param object $field
-   *   The entity field object.
-   * @param array $field_data
-   *   The field data.
-   * @param string $entity_type
-   *   The entity type.
-   * @param array $filter_params
-   *   The filters for the query conditions.
-   *
-   * @return array|int
-   *   The entity id.
-   *
-   * @throws \Drupal\Core\TypedData\Exception\MissingDataException
-   *   Error for missing data.
-   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
-   *
-   * @see ContentLoader::preprocessFieldData()
-   */
-  protected function referenceEntityLoad($field, array &$field_data, $entity_type, array $filter_params) {
-    // Use query factory to create a query object for the node of entity_type.
-    $query = \Drupal::entityQuery($entity_type);
-
-    // Apply filter parameters.
-    foreach ($filter_params as $property => $value) {
-      $query->condition($property, $value);
-    }
-
-    $entity_ids = $query->execute();
-
-    if (empty($entity_ids)) {
-      $entity = $this->getEntityStorage($entity_type)->create($filter_params);
-      $entity_ids = [$entity->id()];
-    }
-
-    if (empty($entity_ids)) {
-      return $this->throwParamError('Unable to find referenced content', $entity_type, $filter_params);
-    }
-
-    // Use the first match for our value.
-    $field_data['target_id'] = array_shift($entity_ids);
-
-    // Remove process data to avoid issues when setting the value.
-    unset($field_data['#process']);
-
-    return $entity_ids;
-  }
-
-  /**
-   * Processor function for processing and loading a file attachment.
-   *
-   * @param object $field
-   *   The entity field object.
-   * @param array $field_data
-   *   The field data.
-   * @param string $entity_type
-   *   The entity type.
-   * @param array $filter_params
-   *   The filters for the query conditions.
-   *
-   * @return array|int
-   *   The entity id.
-   *
-   * @throws \Drupal\Core\TypedData\Exception\MissingDataException
-   *   Error for missing data.
-   *
-   * @see ContentLoader::preprocessFieldData()
-   */
-  protected function fileEntityLoad($field, array &$field_data, $entity_type, array $filter_params) {
-    $filename = $filter_params['filename'];
-    $directory = '/data_files/';
-    // If the entity type is an image, look in to the /images directory.
-    if ($entity_type == 'image') {
-      $directory = '/images/';
-    }
-    $output = file_get_contents($this->path . $directory . $filename);
-    if ($output !== FALSE) {
-      $destination = $field->getSetting('uri_scheme') . '://';
-      // Look-up the field's directory configuation.
-      if ($directory = $field->getSetting('file_directory')) {
-        $directory = trim($directory, '/');
-        $directory = PlainTextOutput::renderFromHtml(\Drupal::token()->replace($directory));
-        if ($directory) {
-          $destination .= $directory . '/';
-        }
-      }
-
-      // Create the destination directory if it does not already exist.
-      file_prepare_directory($destination, FILE_CREATE_DIRECTORY);
-
-      // Save the file data or return an existing file.
-      $file = file_save_data($output, $destination . $filename, FILE_EXISTS_REPLACE);
-
-      // Use the newly created file id as the value.
-      $field_data['target_id'] = $file->id();
-
-      // Remove process data to avoid issues when setting the value.
-      unset($field_data['#process']);
-
-      return $file->id();
-    }
-    else {
-      return $this->throwParamError('Unable to process file content', $entity_type, $filter_params);
-    }
   }
 
   /**
@@ -751,31 +618,6 @@ class ContentLoader implements ContentLoaderInterface {
     }
 
     return isset($entity) ? $entity : FALSE;
-  }
-
-  /**
-   * Prepare an error message and throw error.
-   *
-   * @param string $error_message
-   *   The error message to display.
-   * @param string $entity_type
-   *   The entity type.
-   * @param array $filter_params
-   *   The filters for the query conditions.
-   */
-  protected function throwParamError($error_message, $entity_type, array $filter_params) {
-    // Build parameter output description for error message.
-    $error_params = [
-      '[',
-      '  "entity_type" => ' . $entity_type . ',',
-    ];
-    foreach ($filter_params as $key => $value) {
-      $error_params[] = sprintf("  '%s' => '%s',", $key, $value);
-    }
-    $error_params[] = ']';
-    $param_output = implode("\n", $error_params);
-
-    throw new MissingDataException(__CLASS__ . ': ' . $error_message . ': ' . $param_output);
   }
 
 }

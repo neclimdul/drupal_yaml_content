@@ -18,6 +18,14 @@ interface ContentLoaderInterface extends ContainerInjectionInterface {
   public function setContentPath($path);
 
   /**
+   * Get a path prefix for all content files to be loaded from.
+   *
+   * @return string
+   *   The path for where all content files will be loaded from.
+   */
+  public function getContentPath();
+
+  /**
    * Parse the given yaml content file into an array.
    *
    * @param string $content_file

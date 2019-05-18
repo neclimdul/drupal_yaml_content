@@ -3,6 +3,8 @@
 namespace Drupal\Tests\yaml_content\Unit\ContentLoader;
 
 use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
+use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\Core\Field\FieldItemList;
 use Drupal\yaml_content\ContentLoader\ContentLoader;
 
 /**
@@ -88,6 +90,42 @@ class ContentLoaderTest extends ContentLoaderTestBase {
    */
   public function testLoadContent() {
     $this->markTestIncomplete();
+  }
+
+  /**
+   * @covers ::populateField
+   */
+  public function testPopulateFieldCardinalityZero() {
+    $field_definition = new BaseFieldDefinition();
+    $field_definition->setCardinality(0);
+    $field = new FieldItemList($field_definition, 'foobar');
+    $field_data = [];
+    $this->setExpectedException(\InvalidArgumentException::class, "'foobar' cannot hold any values.");
+    $this->contentLoader->populateField($field, $field_data);
+  }
+
+  /**
+   * @covers ::populateField
+   */
+  public function testPopulateFieldCardinalityTooMuchData() {
+    $field_definition = new BaseFieldDefinition();
+    $field_definition->setCardinality(1);
+    $field = new FieldItemList($field_definition, 'foobar');
+    $field_data = [[], [] , []];
+    $this->setExpectedException(\InvalidArgumentException::class, "'foobar' cannot hold more than 1 values. 3 values were parsed from the YAML file.");
+    $this->contentLoader->populateField($field, $field_data);
+  }
+
+  /**
+   * @covers ::populateField
+   */
+  public function testPopulateFieldProcess() {
+    $field_definition = new BaseFieldDefinition();
+    $field_definition->setCardinality(1);
+    $field = new FieldItemList($field_definition, 'foobar');
+    $field_data = [[]];
+    $this->markTestIncomplete('We cannot easily test processing is triggered because we cannot inject a Plugin Manager yet.');
+    $this->contentLoader->populateField($field, $field_data);
   }
 
 }
