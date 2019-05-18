@@ -17,3 +17,7 @@ services:
     parent: logger.channel_base
     arguments:
       - 'yaml_content'
+  yaml_content.event_subscriber.yaml_content_menu_hierarchy:
+    class: Drupal\yaml_content\EventSubscriber\MenuHierarchySubscriber
+    tags:
+      - {name: event_subscriber}
