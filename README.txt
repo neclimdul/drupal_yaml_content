@@ -47,3 +47,40 @@ To run the import, ensure the yaml_content module is enabled and run the followi
 command through Drush:
 
     drush yaml-content-import-module yaml_content
+
+-- INSTALLATION PROFILE USAGE --
+
+To trigger loading content during an installation profile just add an install
+task.
+
+/**
+ * Implements hook_install_tasks().
+ */
+function MYPROFILE_install_tasks(&$install_state) {
+  $tasks = [
+    // Install the demo content using YAML Content.
+    'MYPROFILE_install_content' => [
+      'display_name' => t('Install demo content'),
+      'type' => 'normal',
+    ],
+  ];
+
+  return $tasks;
+}
+
+/**
+ * Callback function to install demo content.
+ *
+ * @see MYPROFILE_install_tasks()
+ */
+function MYPROFILE_install_content() {
+  // Create default content.
+  $loader = \Drupal::service('yaml_content.load_helper');
+  $loader->importProfile('MYPROFILE');
+
+  // Set front page to the page loaded above.
+  \Drupal::configFactory()
+    ->getEditable('system.site')
+    ->set('page.front', '/home')
+    ->save(TRUE);
+}
