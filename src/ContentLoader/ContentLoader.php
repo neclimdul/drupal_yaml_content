@@ -675,7 +675,7 @@ class ContentLoader implements ContentLoaderInterface {
     }
     $output = file_get_contents($this->path . $directory . $filename);
     if ($output !== FALSE) {
-      $destination = 'public://';
+      $destination = $field->getSetting('uri_scheme') . '://';
       // Look-up the field's directory configuation.
       if ($directory = $field->getSetting('file_directory')) {
         $directory = trim($directory, '/');
