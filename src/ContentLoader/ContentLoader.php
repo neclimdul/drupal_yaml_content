@@ -619,9 +619,9 @@ class ContentLoader implements ContentLoaderInterface {
       case 'paragraph':
         break;
 
-      case 'media':
-        // @todo Add special handling to check file name or path.
-        break;
+      // case 'media':
+      //  // @todo Add special handling to check file name or path.
+      //  break;
 
       default:
         // Load entity type handler.
