@@ -18,6 +18,14 @@ interface ContentLoaderInterface extends ContainerInjectionInterface {
   public function setContentPath($path);
 
   /**
+   * Get a path prefix for all content files to be loaded from.
+   *
+   * @return string
+   *   The path for where all content files will be loaded from.
+   */
+  public function getContentPath();
+
+  /**
    * Parse the given yaml content file into an array.
    *
    * @param string $content_file
@@ -53,5 +61,15 @@ interface ContentLoaderInterface extends ContainerInjectionInterface {
    *   The entity returned after building from the parsed content data.
    */
   public function buildEntity($entity_type, array $content_data);
+
+  /**
+   * Build an entity from the provided content array.
+   *
+   * @param array $content_item
+   *   A single entry from a content source.
+   *
+   * @return \Drupal\Core\Entity\EntityInterface
+   */
+  public function saveEntity(array $content_item);
 
 }

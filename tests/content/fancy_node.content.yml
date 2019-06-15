@@ -1,0 +1,71 @@
+- entity: "taxonomy_term"
+  vid: "tags"
+  name: "Generated content"
+
+- entity: "node"
+  type: "article"
+  title: "Basic Article"
+  status: 1
+  body:
+  - format: "full_html"
+    value: |
+      <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vobis
+      voluptatum perceptarum recordatio vitam beatam facit, et quidem corpore
+      perceptarum. Tum Quintus: Est plane, Piso, ut dicis, inquit.</p>
+      <p>Primum cur ista res digna odio est, nisi quod est turpis? Duo Reges:
+      constructio interrete. Rhetorice igitur, inquam, nos mavis quam
+      dialectice disputare?</p>
+  menu:
+  - "#process":
+      callback: "menu_link_content"
+      args:
+      - menu_name: "main"
+        title: "Basic Article"
+        description: "Basic Article"
+        weight: 0
+  field_tags:
+  # Attach existing term.
+  - '#process':
+      callback: 'reference'
+      args:
+      - 'taxonomy_term'
+      - vid: 'tags'
+        name: 'Generated content'
+  # Missing tag that will not be attached.
+  - '#process':
+      callback: 'reference'
+      args:
+      - 'taxonomy_term'
+      - vid: 'tags'
+        name: 'Imported demo content'
+
+- entity: "node"
+  type: "article"
+  title: "Article root"
+  status: 1
+  body:
+  - format: "full_html"
+    value: 'my article body'
+  menu:
+    menu_name: "main"
+    title: "Article root"
+    description: "Root article for building complicated menu"
+    weight: 0
+- entity: "node"
+  type: "article"
+  title: "Article leaf"
+  status: 1
+  body:
+  - format: "full_html"
+    value: 'my article body'
+  menu:
+    menu_name: "main"
+    title: "Article leaf"
+    description: "Leaf article part of more complicated menu structure"
+    weight: 0
+    parent:
+    - '#process':
+        callback: 'menu_link_content'
+        args:
+        - menu_name: "main"
+          title: "Article root"
