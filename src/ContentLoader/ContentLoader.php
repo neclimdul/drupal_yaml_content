@@ -503,8 +503,14 @@ class ContentLoader implements ContentLoaderInterface {
 
     // If we're updating content in-place, empty the field before population.
     if ($this->existenceCheck() && !$field->isEmpty()) {
-      // Trigger delete callbacks on each field item.
-      $field->delete();
+      // Get parent entity.
+      $parent = $field->getParent()->getValue();
+
+      // Skip deleting field if parent entity is new.
+      if ($parent && !$parent->isNew()) {
+        // Trigger delete callbacks on each field item.
+        $field->delete();
+      }
 
       // Special handling for non-reusable entity reference values.
       if ($field instanceof EntityReferenceFieldItemList) {
