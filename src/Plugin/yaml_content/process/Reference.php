@@ -82,8 +82,19 @@ class Reference extends YamlContentProcessBase implements YamlContentProcessInte
     }
 
     if (!empty($entity_ids)) {
+      // By default reference fields use "target_id" as the destination value
+      // in the field structure to store the referenced ID. Some field types
+      // use different strings, e.g. og_membership entities use "value". Allow
+      // the target value to be changed by passing a third item to the reference
+      // configuration.
+      $target = 'target_id';
+      if (!empty($this->configuration[2])) {
+        print_r($this->configuration[2]);
+        $target = $this->configuration[2];
+      }
+
       // Use the first match for our value.
-      $field_data['target_id'] = array_shift($entity_ids);
+      $field_data[$target] = array_shift($entity_ids);
 
       // Remove process data to avoid issues when setting the value.
       unset($field_data['#process']);
