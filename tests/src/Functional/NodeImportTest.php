@@ -2,7 +2,8 @@
 
 namespace Drupal\Tests\yaml_content\Functional;
 
-use Drupal\node\NodeInterface;
+use Drupal\Core\Field\FieldStorageDefinitionInterface;
+use Drupal\Tests\field\Traits\EntityReferenceTestTrait;
 use Drupal\Tests\BrowserTestBase;
 
 /**
@@ -11,6 +12,13 @@ use Drupal\Tests\BrowserTestBase;
  * @group yaml_content
  */
 class NodeImportTest extends BrowserTestBase {
+
+  use EntityReferenceTestTrait;
+
+  /**
+   * {@inheritdoc}
+   */
+  protected $defaultTheme = 'stark';
 
   /**
    * Directory where test files are to be created.
@@ -33,6 +41,7 @@ class NodeImportTest extends BrowserTestBase {
    */
   protected static $modules = [
     // Core dependencies.
+    'taxonomy',
     'node',
     'field',
     'user',
@@ -94,6 +103,47 @@ END_OF_VALUE;
     $this->assertEquals($expected_content, $body_value['value'], 'Body field content was not correctly assigned.');
 
     return $entity;
+  }
+
+  public function testFancyNode() {
+    $this->setupTaxonomyField();
+
+    /** @var \Drupal\Core\Entity\Entity[] $entities */
+    $entities = $this->contentLoader->loadContent('fancy_node.content.yml');
+
+    $this->assertTrue(is_array($entities), 'An array was not returned from loadContent().');
+    $this->assertEquals(2, count($entities), 'No entity IDs were returned from loadContent().');
+
+    $tag = $entities[0];
+    $node = $entities[1];
+
+    $tags = $node->get('field_tags');
+    $this->assertEquals(['target_id' => $tag->id()], $tags->get(0)->getValue(), 'Existing tag is connected.');
+    $this->assertNull($tags->get(1), 'Missing tag is not created.');
+  }
+
+  /**
+   * Helper to fill out the tags taxonomy field from the standard profile.
+   */
+  protected function setupTaxonomyField() {
+    // Create tags reference field.
+    $field_name = 'field_tags';
+    $handler_settings = [
+      'target_bundles' => [
+        'tags' => 'tags',
+      ],
+      'auto_create' => TRUE,
+    ];
+    $this->createEntityReferenceField('node', 'article', $field_name, 'Tags', 'taxonomy_term', 'default', $handler_settings, FieldStorageDefinitionInterface::CARDINALITY_UNLIMITED);
+    $entity_type_manager = $this->container->get('entity_type.manager');
+    $entity_type_manager
+      ->getStorage('entity_form_display')
+      ->load('node.article.default')
+      ->setComponent($field_name, [
+        'type' => 'entity_reference_autocomplete_tags',
+        'weight' => -4,
+      ])
+      ->save();
   }
 
 }
