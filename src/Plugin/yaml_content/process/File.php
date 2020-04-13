@@ -46,7 +46,8 @@ class File extends YamlContentProcessBase implements YamlContentProcessInterface
       }
 
       // Create the destination directory if it does not already exist.
-      FileSystemInterface::prepareDirectory($destination, FileSystemInterface::CREATE_DIRECTORY);
+      \Drupal::service('file_system')
+        ->prepareDirectory($destination, FileSystemInterface::CREATE_DIRECTORY);
 
       // Save the file data or return an existing file.
       $file = file_save_data($output, $destination . $filename, FileSystemInterface::EXISTS_REPLACE);
