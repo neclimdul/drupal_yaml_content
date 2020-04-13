@@ -17,14 +17,16 @@ class LoadHelper {
   use StringTranslationTrait;
 
   /**
-   * @var \Drupal\yaml_content\ContentLoader\ContentLoaderInterface $loader
-   *   The content loader to use for importing content.
+   * The content loader to use for importing content.
+   *
+   * @var \Drupal\yaml_content\ContentLoader\ContentLoaderInterface
    */
   protected $loader;
 
   /**
-   * @var $logger
-   *   The logging channel for recording import events.
+   * The logging channel for recording import events.
+   *
+   * @var \Psr\Log\LoggerInterface
    */
   protected $logger;
 
@@ -33,12 +35,12 @@ class LoadHelper {
    *
    * @param \Drupal\yaml_content\ContentLoader\ContentLoaderInterface $content_loader
    *   The content loader service to use for content imports.
-   * @param \Drupal\Core\Logger\LoggerChannelInterface $logger
+   * @param \Psr\Log\LoggerInterface $logger
    *   The logging channel for recording import events.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $translation
    *   String translation service for message logging.
    */
-  public function __construct(ContentLoaderInterface $content_loader, LoggerChannelInterface $logger, TranslationInterface $translation) {
+  public function __construct(ContentLoaderInterface $content_loader, LoggerInterface $logger, TranslationInterface $translation) {
     $this->loader = $content_loader;
     $this->logger = $logger;
 
