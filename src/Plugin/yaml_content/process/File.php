@@ -3,6 +3,7 @@
 namespace Drupal\yaml_content\Plugin\yaml_content\process;
 
 use Drupal\Component\Render\PlainTextOutput;
+use Drupal\Core\File\FileSystemInterface;
 use Drupal\yaml_content\Plugin\ProcessingContext;
 use Drupal\yaml_content\Plugin\YamlContentProcessBase;
 use Drupal\yaml_content\Plugin\YamlContentProcessInterface;
@@ -45,10 +46,10 @@ class File extends YamlContentProcessBase implements YamlContentProcessInterface
       }
 
       // Create the destination directory if it does not already exist.
-      file_prepare_directory($destination, FILE_CREATE_DIRECTORY);
+      FileSystemInterface::prepareDirectory($destination, FileSystemInterface::CREATE_DIRECTORY);
 
       // Save the file data or return an existing file.
-      $file = file_save_data($output, $destination . $filename, FILE_EXISTS_REPLACE);
+      $file = file_save_data($output, $destination . $filename, FileSystemInterface::EXISTS_REPLACE);
 
       // Use the newly created file id as the value.
       $field_data['target_id'] = $file->id();

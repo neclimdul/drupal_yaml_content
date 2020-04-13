@@ -2,7 +2,9 @@
 
 namespace Drupal\yaml_content\Service;
 
+use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
+use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\yaml_content\ContentLoader\ContentLoaderInterface;
@@ -129,17 +131,17 @@ class LoadHelper {
    *
    * @return array
    *   An associative array of objects keyed by filename with the following
-   *   properties as returned by file_scan_directory():
+   *   properties as returned by FileSystemInterface::scanDirectory():
    *
    *   - 'uri'
    *   - 'filename'
    *   - 'name'
    *
-   * @see file_scan_directory()
+   * @see \Drupal\Core\File\FileSystemInterface::scanDirectory()
    */
   public function discoverFiles($path, $mask = '/.*\.content\.yml/') {
     // Identify files for import.
-    $files = file_scan_directory($path, $mask, [
+    $files = FileSystemInterface::scanDirectory($path, $mask, [
       'key' => 'filename',
       'recurse' => FALSE,
     ]);
@@ -154,14 +156,15 @@ class LoadHelper {
    * Import content files using a Content Loader.
    *
    * @param array $files
-   *   An array of file descriptors as loaded by file_scan_directory() keyed by
-   *   filename. Each of the listed files will be imported.
+   *   An array of file descriptors as loaded by
+   *   FileSystemInterface::scanDirectory() keyed by filename. Each of the
+   *   listed files will be imported.
    */
   protected function importFiles(array $files) {
     // @todo Verify files before loading for import.
     foreach ($files as $filename => $file) {
       // Log pre-import notices.
-      drupal_set_message($this->t('Importing content: %file', [
+      MessengerInterface::addMessage($this->t('Importing content: %file', [
         '%file' => $filename,
       ]));
       $this->logger->notice('Importing content: %file', [
@@ -171,7 +174,7 @@ class LoadHelper {
       $loaded = $this->loader->loadContent($filename);
 
       // Log post-import summaries.
-      drupal_set_message($this->t('Imported %count items from %file', [
+      MessengerInterface::addMessage($this->t('Imported %count items from %file', [
         '%count' => count($loaded),
         '%file' => $filename,
       ]));

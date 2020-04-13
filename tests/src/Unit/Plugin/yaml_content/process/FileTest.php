@@ -12,8 +12,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Test file processing.
  *
- * Note: This only tests failures because to pass we have have modules and
- * write to the filesystem.
+ * Note: This only tests failures because to test passes would require writing
+ * to the file system.
  *
  * @group yaml_content
  *
