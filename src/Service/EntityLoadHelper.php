@@ -2,6 +2,7 @@
 
 namespace Drupal\yaml_content\Service;
 
+use Drupal\Core\Config\Entity\ConfigEntityTypeInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -283,7 +284,10 @@ class EntityLoadHelper implements ContainerInjectionInterface {
     if ($entity_definition->hasKey($key)) {
       $attribute_type = 'property';
     }
-    elseif (array_key_exists($key, $field_list)) {
+    elseif (($entity_definition instanceof ConfigEntityTypeInterface) && in_array($key, $entity_definition->getPropertiesToExport())) {
+      $attribute_type = 'property';
+    }
+    elseif (is_array($field_list) && array_key_exists($key, $field_list)) {
       $attribute_type = 'field';
     }
     else {
