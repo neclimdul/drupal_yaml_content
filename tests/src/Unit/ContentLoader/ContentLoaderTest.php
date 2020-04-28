@@ -22,7 +22,9 @@ class ContentLoaderTest extends ContentLoaderTestBase {
    */
   public function testSetPath() {
     $this->contentLoader->setContentPath($this->root->url());
-    $this->assertAttributeEquals($this->root->url(), 'path', $this->contentLoader);
+    $reflected_path = (new \ReflectionObject($this->contentLoader))->getProperty('path');
+    $reflected_path->setAccessible(TRUE);
+    $this->assertEquals($this->root->url(), $reflected_path->getValue($this->contentLoader));
   }
 
   /**

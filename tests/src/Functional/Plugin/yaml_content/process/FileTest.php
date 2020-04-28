@@ -30,6 +30,11 @@ class FileTest extends BrowserTestBase {
   protected static $modules = ['file'];
 
   /**
+   * {@inheritdoc}
+   */
+  protected $defaultTheme = 'stark';
+
+  /**
    * Test file processing.
    *
    * @covers ::process
