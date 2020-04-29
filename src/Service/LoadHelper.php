@@ -3,11 +3,11 @@
 namespace Drupal\yaml_content\Service;
 
 use Drupal\Core\File\FileSystemInterface;
-use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\yaml_content\ContentLoader\ContentLoaderInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * A helper class to support the content loading process.
