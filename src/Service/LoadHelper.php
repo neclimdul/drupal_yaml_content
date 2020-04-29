@@ -2,8 +2,6 @@
 
 namespace Drupal\yaml_content\Service;
 
-use Drupal\Core\File\FileSystemInterface;
-use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\yaml_content\ContentLoader\ContentLoaderInterface;
@@ -143,7 +141,7 @@ class LoadHelper {
    */
   public function discoverFiles($path, $mask = '/.*\.content\.yml/') {
     // Identify files for import.
-    $files = FileSystemInterface::scanDirectory($path, $mask, [
+    $files = \Drupal::service('file_system')->scanDirectory($path, $mask, [
       'key' => 'filename',
       'recurse' => FALSE,
     ]);
@@ -166,7 +164,7 @@ class LoadHelper {
     // @todo Verify files before loading for import.
     foreach ($files as $filename => $file) {
       // Log pre-import notices.
-      MessengerInterface::addMessage($this->t('Importing content: %file', [
+      \Drupal::messenger()->addMessage($this->t('Importing content: %file', [
         '%file' => $filename,
       ]));
       $this->logger->notice('Importing content: %file', [
@@ -176,7 +174,7 @@ class LoadHelper {
       $loaded = $this->loader->loadContent($filename);
 
       // Log post-import summaries.
-      MessengerInterface::addMessage($this->t('Imported %count items from %file', [
+      \Drupal::messenger()->addMessage($this->t('Imported %count items from %file', [
         '%count' => count($loaded),
         '%file' => $filename,
       ]));
