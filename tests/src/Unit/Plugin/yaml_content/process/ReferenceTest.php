@@ -17,7 +17,7 @@ use Prophecy\Argument;
  *
  * @group yaml_content
  *
- * @coversDefaultClass \Drupal\yaml_content\Plugin\yaml_content\process\File
+ * @coversDefaultClass \Drupal\yaml_content\Plugin\yaml_content\process\Reference
  */
 class ReferenceTest extends UnitTestCase {
 

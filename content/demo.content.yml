@@ -14,6 +14,10 @@
   type: "article"
   title: "Basic Article"
   status: 1
+  # Assumes Pathauto is installed.
+  path:
+    - pathauto: 0
+      alias: '/articles/a-basic-article'
   # Rich text fields contain multiple keys that must be provided.
   body:
     # The format may be the machine name of any configured text filter.

@@ -3,9 +3,9 @@
 namespace Drupal\Tests\yaml_content\Functional;
 
 use Drupal\Core\Field\FieldStorageDefinitionInterface;
-use Drupal\field\Tests\EntityReference\EntityReferenceTestTrait;
 use Drupal\menu_link_content\Entity\MenuLinkContent as MenuLinkContentEntity;
 use Drupal\menu_link_content\Plugin\Menu\MenuLinkContent;
+use Drupal\Tests\field\Traits\EntityReferenceTestTrait;
 use Drupal\Tests\BrowserTestBase;
 
 /**
@@ -16,6 +16,11 @@ use Drupal\Tests\BrowserTestBase;
 class NodeImportTest extends BrowserTestBase {
 
   use EntityReferenceTestTrait;
+
+  /**
+   * {@inheritdoc}
+   */
+  protected $defaultTheme = 'stark';
 
   /**
    * Directory where test files are to be created.

@@ -22,7 +22,9 @@ class ContentLoaderTest extends ContentLoaderTestBase {
    */
   public function testSetPath() {
     $this->contentLoader->setContentPath($this->root->url());
-    $this->assertAttributeEquals($this->root->url(), 'path', $this->contentLoader);
+    $reflected_path = (new \ReflectionObject($this->contentLoader))->getProperty('path');
+    $reflected_path->setAccessible(TRUE);
+    $this->assertEquals($this->root->url(), $reflected_path->getValue($this->contentLoader));
   }
 
   /**
@@ -41,21 +43,20 @@ class ContentLoaderTest extends ContentLoaderTestBase {
 
   /**
    * Tests behavior when a content file is unavailable.
-   *
-   * @expectedException \PHPUnit_Framework_Error_Warning
    */
-  public function testMissingContentFile() {
-    $test_file = 'missing.content.yml';
+   public function testMissingContentFile() {
+     $test_file = 'missing.content.yml';
 
-    // Confirm the file is not actually present.
-    $this->assertFalse($this->root->hasChild('content/missing.content.yml'));
+     // Confirm the file is not actually present.
+     $this->assertFalse($this->root->hasChild('content/missing.content.yml'));
 
-    // Prepare the path for the missing content file.
-    $this->contentLoader->setContentPath($this->root->url());
+     // Prepare the path for the missing content file.
+     $this->contentLoader->setContentPath($this->root->url());
 
-    // Parse the test file expecting an error for the missing file.
-    $this->contentLoader->parseContent($test_file);
-  }
+     // Parse the test file expecting an error for the missing file.
+     $this->expectException(\PHPUnit\Framework\Error\Warning::class);
+     $this->contentLoader->parseContent($test_file);
+   }
 
   /**
    * Tests the correct return value when parsing an empty file.
@@ -100,7 +101,8 @@ class ContentLoaderTest extends ContentLoaderTestBase {
     $field_definition->setCardinality(0);
     $field = new FieldItemList($field_definition, 'foobar');
     $field_data = [];
-    $this->setExpectedException(\InvalidArgumentException::class, "'foobar' cannot hold any values.");
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessage("'foobar' cannot hold any values.");
     $this->contentLoader->populateField($field, $field_data);
   }
 
@@ -112,7 +114,8 @@ class ContentLoaderTest extends ContentLoaderTestBase {
     $field_definition->setCardinality(1);
     $field = new FieldItemList($field_definition, 'foobar');
     $field_data = [[], [] , []];
-    $this->setExpectedException(\InvalidArgumentException::class, "'foobar' cannot hold more than 1 values. 3 values were parsed from the YAML file.");
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessage("'foobar' cannot hold more than 1 values. 3 values were parsed from the YAML file.");
     $this->contentLoader->populateField($field, $field_data);
   }
 

@@ -12,8 +12,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Test file processing.
  *
- * Note: This only tests failures because to pass we have have modules and
- * write to the filesystem.
+ * Note: This only tests failures because to test passes would require writing
+ * to the file system.
  *
  * @group yaml_content
  *
@@ -48,7 +48,8 @@ class FileTest extends UnitTestCase {
   public function testProcessMissingLoader() {
     $context = new ProcessingContext();
     $data = [];
-    $this->setExpectedException(\Exception::class, 'Missing content loader context.');
+    $this->expectException(\Exception::class);
+    $this->expectExceptionMessage('Missing content loader context.');
     $this->filePlugin->process($context, $data);
   }
 
@@ -60,7 +61,8 @@ class FileTest extends UnitTestCase {
     $context->setContentLoader(new ContentLoader($this->prophesize(ContainerInterface::class)->reveal()));
     $context->getContentLoader()->setContentPath(realpath($this->getFixturePath() . '/../../'));
     $data = [];
-    $this->setExpectedException(\Exception::class, 'Missing field context.');
+    $this->expectException(\Exception::class);
+    $this->expectExceptionMessage('Missing field context.');
     $this->filePlugin->process($context, $data);
   }
 

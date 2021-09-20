@@ -2,7 +2,7 @@
 
 namespace Drupal\Tests\yaml_content\Functional;
 
-use Drupal\Core\Entity\Entity;
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Tests\BrowserTestBase;
 
 /**
@@ -11,6 +11,11 @@ use Drupal\Tests\BrowserTestBase;
  * @group yaml_content
  */
 class TaxonomyImportTest extends BrowserTestBase {
+
+  /**
+   * {@inheritdoc}
+   */
+  protected $defaultTheme = 'stark';
 
   /**
    * Directory where test files are to be created.
@@ -70,7 +75,17 @@ class TaxonomyImportTest extends BrowserTestBase {
     $this->assertEquals(['target_id' => $entities[1]->id() - 1], $entities[1]->parent->get(0)->getValue(), 'Specified parent reference should be populated with a id.');
   }
 
-  protected function assertTaxonomy(Entity $entity, $title, $vid) {
+  /**
+   * Assert that a given entity is a taxonomy term.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity object being checked.
+   * @param string $title
+   *   The expected label of the entity argument.
+   * @param int $vid
+   *   The expected vocabulary ID of the entity argument.
+   */
+  protected function assertTaxonomy(EntityInterface $entity, $title, $vid) {
     $this->assertEquals('taxonomy_term', $entity->getEntityTypeId(), 'Entity type should be taxonomy_term');
     $this->assertEquals(['target_id' => $vid], $entity->get('vid')->get(0)->getValue(), 'Vocabulary id is populated');
     $this->assertEquals($title, $entity->label(), 'Term name is populated.');

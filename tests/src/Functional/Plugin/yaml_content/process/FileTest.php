@@ -1,10 +1,11 @@
 <?php
 
-namespace Drupal\Tests\yaml_content\Kernel\Plugin\yaml_content\process;
+namespace Drupal\Tests\yaml_content\Functional\Plugin\yaml_content\process;
 
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Field\FieldItemList;
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\file\Entity\File as FileEntity;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\Tests\yaml_content\Traits\LoadFixturesTrait;
 use Drupal\yaml_content\ContentLoader\ContentLoader;
@@ -17,7 +18,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * Note: This only tests writing a successful file.
  *
- * TODO: Test image special case?
+ * @todo Test image special case?
  *
  * @group yaml_content
  * @coversDefaultClass \Drupal\yaml_content\Plugin\yaml_content\process\File
@@ -27,6 +28,11 @@ class FileTest extends BrowserTestBase {
   use LoadFixturesTrait;
 
   protected static $modules = ['file'];
+
+  /**
+   * {@inheritdoc}
+   */
+  protected $defaultTheme = 'stark';
 
   /**
    * Test file processing.
@@ -49,7 +55,8 @@ class FileTest extends BrowserTestBase {
     $expected_fid = $file->process($context, $data);
     $this->assertEquals(['target_id' => $expected_fid], $data);
 
-    $file = file_load($expected_fid);
+    $storage = \Drupal::entityTypeManager()->getStorage('file');
+    $file = $storage->load($expected_fid);
     $this->assertEquals($args[1]['filename'], $file->getFilename());
     $this->assertFileExists($file->getFileUri());
   }
