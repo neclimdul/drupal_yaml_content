@@ -2,6 +2,7 @@
 
 namespace Drupal\Tests\yaml_content\Functional\Plugin\yaml_content\process;
 
+use Prophecy\PhpUnit\ProphecyTrait;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Field\FieldItemList;
 use Drupal\Core\TypedData\DataDefinition;
@@ -25,6 +26,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class FileTest extends BrowserTestBase {
 
+  use ProphecyTrait;
   use LoadFixturesTrait;
 
   protected static $modules = ['file'];

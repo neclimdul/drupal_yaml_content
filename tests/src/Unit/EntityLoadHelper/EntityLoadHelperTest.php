@@ -42,10 +42,7 @@ class EntityLoadHelperTest extends UnitTestCase {
    */
   protected function getEntityLoadHelperMock($stubbed_methods = NULL) {
     // Partially mock the ContentLoader for testing specific methods.
-    $mock = $this->getMockBuilder(EntityLoadHelper::class)
-      ->disableOriginalConstructor()
-      ->setMethods($stubbed_methods)
-      ->getMock();
+    $mock = $this->createMock(EntityLoadHelper::class);
 
     return $mock;
   }
@@ -491,7 +488,7 @@ class EntityLoadHelperTest extends UnitTestCase {
     // Execute the method.
     $actual = $this->loadHelper->categorizeAttributes($entity_type, $content);
 
-    $this->assertArrayEquals($expected['property'], $actual['property']);
+    $this->assertEquals($expected['property'], $actual['property']);
   }
 
   /**
@@ -508,7 +505,7 @@ class EntityLoadHelperTest extends UnitTestCase {
     // Execute the method.
     $actual = $this->loadHelper->categorizeAttributes($entity_type, $content);
 
-    $this->assertArrayEquals($expected['field'], $actual['field']);
+    $this->assertEquals($expected['field'], $actual['field']);
   }
 
   /**
@@ -525,7 +522,7 @@ class EntityLoadHelperTest extends UnitTestCase {
     // Execute the method.
     $actual = $this->loadHelper->categorizeAttributes($entity_type, $content);
 
-    $this->assertArrayEquals($expected['other'], $actual['other']);
+    $this->assertEquals($expected['other'], $actual['other']);
   }
 
   /**
