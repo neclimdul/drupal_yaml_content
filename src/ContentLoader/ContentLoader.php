@@ -291,7 +291,7 @@ class ContentLoader implements ContentLoaderInterface {
 
     // Dispatch the event notification.
     $content_parsed_event = new ContentParsedEvent($this, $this->contentFile, $this->parsedContent);
-    $this->getEventDispatcher()->dispatch(YamlContentEvents::CONTENT_PARSED, $content_parsed_event);
+    $this->getEventDispatcher()->dispatch($content_parsed_event, YamlContentEvents::CONTENT_PARSED);
 
     return $this->parsedContent;
   }
@@ -333,13 +333,13 @@ class ContentLoader implements ContentLoaderInterface {
 
     // Dispatch the pre-save event.
     $entity_pre_save_event = new EntityPreSaveEvent($this, $entity, $content_item);
-    $this->getEventDispatcher()->dispatch(YamlContentEvents::ENTITY_PRE_SAVE, $entity_pre_save_event);
+    $this->getEventDispatcher()->dispatch($entity_pre_save_event, YamlContentEvents::ENTITY_PRE_SAVE);
 
     $entity->save();
 
     // Dispatch the post-save event.
     $entity_post_save_event = new EntityPostSaveEvent($this, $entity, $content_item);
-    $this->getEventDispatcher()->dispatch(YamlContentEvents::ENTITY_POST_SAVE, $entity_post_save_event);
+    $this->getEventDispatcher()->dispatch($entity_post_save_event, YamlContentEvents::ENTITY_POST_SAVE);
 
     return $entity;
   }
@@ -362,7 +362,7 @@ class ContentLoader implements ContentLoaderInterface {
 
     // Dispatch the entity import event.
     $entity_import_event = new EntityImportEvent($this, $entity_definition, $content_data);
-    $this->getEventDispatcher()->dispatch(YamlContentEvents::IMPORT_ENTITY, $entity_import_event);
+    $this->getEventDispatcher()->dispatch($entity_import_event, YamlContentEvents::IMPORT_ENTITY);
 
     // If it is a 'user' entity, append a timestamp to make the username unique.
     // @todo Move this into an entity-specific processor.
@@ -495,7 +495,7 @@ class ContentLoader implements ContentLoaderInterface {
 
           // Dispatch field import event prior to populating fields.
           $field_import_event = new FieldImportEvent($this, $entity, $field_instance, $field_data);
-          $this->getEventDispatcher()->dispatch(YamlContentEvents::IMPORT_FIELD, $field_import_event);
+          $this->getEventDispatcher()->dispatch($field_import_event, YamlContentEvents::IMPORT_FIELD);
 
           $this->populateField($field_instance, $field_data);
         }
@@ -640,7 +640,9 @@ class ContentLoader implements ContentLoaderInterface {
             $query->condition($key, $value);
           }
         }
-        $entity_ids = $query->execute();
+        $entity_ids = $query
+          ->accessCheck(TRUE)
+          ->execute();
 
         if ($entity_ids) {
           $entity_id = array_shift($entity_ids);

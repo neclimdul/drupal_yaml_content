@@ -58,7 +58,7 @@ class NodeImportTest extends BrowserTestBase {
   /**
    * {@inheritdoc}
    */
-  public function setUp() {
+  public function setUp(): void {
     parent::setUp();
 
     // Create our article content type.
@@ -70,7 +70,7 @@ class NodeImportTest extends BrowserTestBase {
     // Prepare the content loader.
     $this->contentLoader = \Drupal::service('yaml_content.content_loader');
     // Look for content files in the tests directory.
-    $this->contentLoader->setContentPath(drupal_get_path('module', 'yaml_content') . '/tests');
+    $this->contentLoader->setContentPath(\Drupal::service('extension.list.module')->getPath('yaml_content') . '/tests');
   }
 
   /**

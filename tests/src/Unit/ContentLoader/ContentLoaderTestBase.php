@@ -29,15 +29,12 @@ abstract class ContentLoaderTestBase extends UnitTestCase {
    *   this argument is omitted all methods are mocked and execute their
    *   original code.
    *
-   * @return \PHPUnit_Framework_MockObject_MockObject
+   * @return \PHPUnit\Framework\MockObject\MockObject
    *   The mocked ContentLoader object with
    */
   protected function getContentLoaderMock($stubbed_methods = NULL) {
     // Partially mock the ContentLoader for testing specific methods.
-    $this->contentLoader = $this->getMockBuilder(ContentLoader::class)
-      ->disableOriginalConstructor()
-      ->setMethods($stubbed_methods)
-      ->getMock();
+    $this->contentLoader = $this->createMock(ContentLoader::class);
 
     return $this->contentLoader;
   }
@@ -63,7 +60,7 @@ abstract class ContentLoaderTestBase extends UnitTestCase {
   /**
    * {@inheritdoc}
    */
-  public function setUp() {
+  public function setUp(): void {
     parent::setUp();
 
     // Prepare the directory structure.

@@ -74,7 +74,9 @@ class Reference extends YamlContentProcessBase implements YamlContentProcessInte
       $query->condition($property, $value);
     }
 
-    $entity_ids = $query->execute();
+    $entity_ids = $query
+      ->accessCheck(TRUE)
+      ->execute();
 
     if (empty($entity_ids)) {
       $entity = $entity_storage->create($filter_params);
@@ -90,7 +92,6 @@ class Reference extends YamlContentProcessBase implements YamlContentProcessInte
       // configuration.
       $target = 'target_id';
       if (!empty($this->configuration[2])) {
-        print_r($this->configuration[2]);
         $target = $this->configuration[2];
       }
 

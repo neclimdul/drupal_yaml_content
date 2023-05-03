@@ -2,7 +2,7 @@
 
 namespace Drupal\yaml_content\Event;
 
-use Symfony\Component\EventDispatcher\Event;
+use Symfony\Contracts\EventDispatcher\Event;
 use Drupal\yaml_content\ContentLoader\ContentLoaderInterface;
 
 /**

@@ -2,6 +2,7 @@
 
 namespace Drupal\Tests\yaml_content\Unit\ContentLoader;
 
+use PHPUnit\Framework\Error\Warning;
 use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Field\FieldItemList;
@@ -54,7 +55,7 @@ class ContentLoaderTest extends ContentLoaderTestBase {
      $this->contentLoader->setContentPath($this->root->url());
 
      // Parse the test file expecting an error for the missing file.
-     $this->expectException(\PHPUnit\Framework\Error\Warning::class);
+     $this->expectException(Warning::class);
      $this->contentLoader->parseContent($test_file);
    }
 
@@ -81,7 +82,7 @@ class ContentLoaderTest extends ContentLoaderTestBase {
     $parsed_content = $this->contentLoader->parseContent($test_file);
 
     // Confirm an empty array was returned.
-    $this->assertArrayEquals([], $parsed_content, 'Empty content files return an empty array.');
+    $this->assertEquals([], $parsed_content, 'Empty content files return an empty array.');
   }
 
   /**
