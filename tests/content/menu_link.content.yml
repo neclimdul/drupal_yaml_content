@@ -1,0 +1,31 @@
+- entity: "menu_link_content"
+  title: "Home"
+  menu_name: "main"
+  weight: 2
+  link:
+  -
+    uri: "internal:/home"
+    options:
+      attributes:
+        class: 'menu__link menu__link--home magic-button'
+- entity: "menu_link_content"
+  title: "User"
+  menu_name: "main"
+  weight: 0
+  enabled: 1
+  link:
+    uri: "internal:/user"
+- entity: "menu_link_content"
+  title: "Register"
+  menu_name: "main"
+  weight: 0
+  enabled: 0
+  link:
+    uri: "internal:/user/register"
+  parent:
+  # Use process to find a parent menu link.
+  - '#process':
+      callback: 'menu_link_content'
+      args:
+      - menu_name: "main"
+        title: "User"

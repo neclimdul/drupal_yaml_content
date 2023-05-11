@@ -69,13 +69,13 @@ class YamlContentProcessManager extends DefaultPluginManager {
       return;
     }
 
-    // If there is no process element skip trying to process.
-    if (!isset($field_data['#process'])) {
-      return;
+    // Check if the field is a reference field. If so, build the entity ref.
+    if (isset($field_data['entity'])) {
+      $field_data = $context->getContentLoader()->saveEntity($field_data);
     }
 
     // If there is no process element skip trying to process.
-    if (isset($field_data['#process'])) {
+    elseif (isset($field_data['#process'])) {
       $process_config = $field_data['#process'];
       if (isset($process_config['callback'])) {
         $plugin_id = $process_config['callback'];

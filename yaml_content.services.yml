@@ -12,6 +12,7 @@ services:
       - '@yaml_content.content_loader'
       - '@logger.channel.yaml_content'
       - '@string_translation'
+      - '@extension.path.resolver'
   yaml_content.entity_load_helper:
     class: Drupal\yaml_content\Service\EntityLoadHelper
     arguments:
@@ -24,3 +25,9 @@ services:
     class: Drupal\yaml_content\EventSubscriber\MenuHierarchySubscriber
     tags:
       - {name: event_subscriber}
+  yaml_content.event_subscriber.node_links:
+    class: Drupal\yaml_content\EventSubscriber\NodeLinkEventSubscriber
+    tags:
+      - {name: event_subscriber}
+    arguments:
+    - '@plugin.manager.yaml_content.process'

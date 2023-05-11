@@ -5,6 +5,7 @@ namespace Drupal\yaml_content\Service;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\yaml_content\ContentLoader\ContentLoaderInterface;
+use Drupal\Core\Extension\ExtensionPathResolver;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -29,6 +30,13 @@ class LoadHelper {
   protected $logger;
 
   /**
+   * Path resolver service.
+   *
+   * @var \Drupal\Core\Extension\ExtensionPathResolver
+   */
+  protected $pathResolver;
+
+  /**
    * Constructs the load helper service.
    *
    * @param \Drupal\yaml_content\ContentLoader\ContentLoaderInterface $content_loader
@@ -37,10 +45,17 @@ class LoadHelper {
    *   The logging channel for recording import events.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $translation
    *   String translation service for message logging.
+   * @param \Drupal\Core\Extension\ExtensionPathResolver $path_resolver
+   *   Service used to get the path from module machine name.
    */
-  public function __construct(ContentLoaderInterface $content_loader, LoggerInterface $logger, TranslationInterface $translation) {
+  public function __construct(
+    ContentLoaderInterface $content_loader,
+    LoggerInterface $logger,
+    TranslationInterface $translation,
+    ExtensionPathResolver $path_resolver) {
     $this->loader = $content_loader;
     $this->logger = $logger;
+    $this->pathResolver = $path_resolver;
 
     $this->setStringTranslation($translation);
   }
@@ -81,7 +96,7 @@ class LoadHelper {
    *   matching `*.content.yml` are queued for import.
    */
   public function importModule($module, $file = NULL) {
-    $path = drupal_get_path('module', $module);
+    $path = $this->pathResolver->getPath('module', $module);
 
     $this->loader->setContentPath($path);
 
@@ -107,7 +122,7 @@ class LoadHelper {
    *   matching `*.content.yml` are queued for import.
    */
   public function importProfile($profile, $file = NULL) {
-    $path = drupal_get_path('profile', $profile);
+    $path = $this->pathResolver->getPath('profile', $profile);
 
     $this->loader->setContentPath($path);
 

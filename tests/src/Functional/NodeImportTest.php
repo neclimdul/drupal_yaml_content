@@ -3,6 +3,8 @@
 namespace Drupal\Tests\yaml_content\Functional;
 
 use Drupal\Core\Field\FieldStorageDefinitionInterface;
+use Drupal\menu_link_content\Entity\MenuLinkContent as MenuLinkContentEntity;
+use Drupal\menu_link_content\Plugin\Menu\MenuLinkContent;
 use Drupal\Tests\field\Traits\EntityReferenceTestTrait;
 use Drupal\Tests\BrowserTestBase;
 
@@ -47,6 +49,7 @@ class NodeImportTest extends BrowserTestBase {
     'user',
     'filter',
     'text',
+    'menu_link_content',
 
     // This module.
     'yaml_content',
@@ -55,19 +58,19 @@ class NodeImportTest extends BrowserTestBase {
   /**
    * {@inheritdoc}
    */
-  public function setUp() {
+  public function setUp(): void {
     parent::setUp();
 
     // Create our article content type.
     $this->createContentType([
-        'type' => 'article',
-        'name' => 'Article',
-      ]);
+      'type' => 'article',
+      'name' => 'Article',
+    ]);
 
     // Prepare the content loader.
     $this->contentLoader = \Drupal::service('yaml_content.content_loader');
     // Look for content files in the tests directory.
-    $this->contentLoader->setContentPath(drupal_get_path('module', 'yaml_content') . '/tests');
+    $this->contentLoader->setContentPath(\Drupal::service('extension.list.module')->getPath('yaml_content') . '/tests');
   }
 
   /**
@@ -101,8 +104,6 @@ dialectice disputare?</p>
 END_OF_VALUE;
 
     $this->assertEquals($expected_content, $body_value['value'], 'Body field content was not correctly assigned.');
-
-    return $entity;
   }
 
   public function testFancyNode() {
@@ -112,14 +113,44 @@ END_OF_VALUE;
     $entities = $this->contentLoader->loadContent('fancy_node.content.yml');
 
     $this->assertTrue(is_array($entities), 'An array was not returned from loadContent().');
-    $this->assertEquals(2, count($entities), 'No entity IDs were returned from loadContent().');
+    $this->assertEquals(4, count($entities), 'No entity IDs were returned from loadContent().');
 
     $tag = $entities[0];
     $node = $entities[1];
 
     $tags = $node->get('field_tags');
-    $this->assertEquals(['target_id' => $tag->id()], $tags->get(0)->getValue(), 'Existing tag is connected.');
-    $this->assertNull($tags->get(1), 'Missing tag is not created.');
+    $this->assertEquals(['target_id' => $tag->id()], $tags->get(0)
+      ->getValue(), 'Existing tag is connected.');
+    $this->assertNotNull($tags->get(1), 'Missing tag in reference is created.');
+
+    $this->assertEquals('1', $this->loadMenuId($node), 'Menu entry created.');
+    $menu1 = MenuLinkContentEntity::load($this->loadMenuId($entities[2]));
+    $menu2 = MenuLinkContentEntity::load($this->loadMenuId($entities[3]));
+
+    // Assert node 3's menu entry has node 2's as a parent.
+    list(, $uuid) = explode(MenuLinkContent::DERIVATIVE_SEPARATOR, $menu2->get('parent')
+      ->get(0)
+      ->getValue()['value']);
+    $this->assertEquals($menu1->uuid(), $uuid, 'Menu parent correctly set on leaf.');
+  }
+
+  /**
+   * Helper method to retrieve the menu ID for a node.
+   *
+   * @param \Drupal\node\Entity\Node $node
+   *   A node with a menu entry.
+   *
+   * @return string
+   *   The id of the node menu entry.
+   */
+  protected function loadMenuId($node) {
+    $query = \Drupal::entityQuery('menu_link_content')
+      ->condition('link.uri', 'entity:node/' . $node->id())
+      ->condition('menu_name', 'main')
+      ->sort('id', 'ASC')
+      ->range(0, 1);
+    $result = $query->execute();
+    return reset($result);
   }
 
   /**

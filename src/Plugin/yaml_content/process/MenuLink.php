@@ -4,21 +4,22 @@ namespace Drupal\yaml_content\Plugin\yaml_content\process;
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\menu_link_content\Plugin\Menu\MenuLinkContent;
 use Drupal\yaml_content\Plugin\ProcessingContext;
 use Drupal\yaml_content\Plugin\YamlContentProcessBase;
 use Drupal\yaml_content\Plugin\YamlContentProcessInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Plugin for querying and loading a referenced entity.
+ * Plugin for querying and loading a menu content link entity.
  *
  * @YamlContentProcess(
- *   id = "reference",
- *   title = @Translation("Entity Reference Processor"),
- *   description = @Translation("Attach an entity reference.")
+ *   id = "menu_link_content",
+ *   title = @Translation("Menu Link Content Processor"),
+ *   description = @Translation("Processing and loading a file attachment.")
  * )
  */
-class Reference extends YamlContentProcessBase implements YamlContentProcessInterface, ContainerFactoryPluginInterface {
+class MenuLink extends YamlContentProcessBase implements YamlContentProcessInterface, ContainerFactoryPluginInterface {
 
   /**
    * The entity manager.
@@ -61,8 +62,8 @@ class Reference extends YamlContentProcessBase implements YamlContentProcessInte
    * {@inheritdoc}
    */
   public function process(ProcessingContext $context, array &$field_data) {
-    $entity_type = $this->configuration[0];
-    $filter_params = $this->configuration[1];
+    $entity_type = 'menu_link_content';
+    $filter_params = $this->configuration[0];
 
     $entity_storage = $this->entityTypeManager->getStorage($entity_type);
 
@@ -71,39 +72,29 @@ class Reference extends YamlContentProcessBase implements YamlContentProcessInte
 
     // Apply filter parameters.
     foreach ($filter_params as $property => $value) {
-      $query->condition($property, $value);
+      if (!is_array($value)) {
+        $query->condition($property, $value);
+      }
     }
-
-    $entity_ids = $query
-      ->accessCheck(TRUE)
-      ->execute();
+    $entity_ids = $query->accessCheck(FALSE)->execute();
 
     if (empty($entity_ids)) {
       $entity = $entity_storage->create($filter_params);
       $entity->save();
       $entity_ids = [$entity->id()];
     }
-
-    if (!empty($entity_ids)) {
-      // By default reference fields use "target_id" as the destination value
-      // in the field structure to store the referenced ID. Some field types
-      // use different strings, e.g. og_membership entities use "value". Allow
-      // the target value to be changed by passing a third item to the reference
-      // configuration.
-      $target = 'target_id';
-      if (!empty($this->configuration[2])) {
-        $target = $this->configuration[2];
-      }
-
-      // Use the first match for our value.
-      $field_data[$target] = array_shift($entity_ids);
-
-      // Remove process data to avoid issues when setting the value.
-      unset($field_data['#process']);
-
-      return $entity_ids;
+    else {
+      // Load the first match entity so we can get the uuid and bundle.
+      $entity = $entity_storage->load(reset($entity_ids));
     }
-    $this->throwParamError('Unable to find referenced content', $entity_type, $filter_params);
+
+    if (empty($entity_ids)) {
+      return $this->throwParamError('Unable to find referenced content', $entity_type, $filter_params);
+    }
+
+    $field_data = $entity->bundle() . MenuLinkContent::DERIVATIVE_SEPARATOR . $entity->uuid();
+
+    return $entity_ids;
   }
 
 }

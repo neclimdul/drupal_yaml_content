@@ -15,6 +15,14 @@
       <p>Primum cur ista res digna odio est, nisi quod est turpis? Duo Reges:
       constructio interrete. Rhetorice igitur, inquam, nos mavis quam
       dialectice disputare?</p>
+  menu:
+  - "#process":
+      callback: "menu_link_content"
+      args:
+      - menu_name: "main"
+        title: "Basic Article"
+        description: "Basic Article"
+        weight: 0
   field_tags:
   # Attach existing term.
   - '#process':
@@ -30,3 +38,34 @@
       - 'taxonomy_term'
       - vid: 'tags'
         name: 'Imported demo content'
+
+- entity: "node"
+  type: "article"
+  title: "Article root"
+  status: 1
+  body:
+  - format: "full_html"
+    value: 'my article body'
+  menu:
+    menu_name: "main"
+    title: "Article root"
+    description: "Root article for building complicated menu"
+    weight: 0
+- entity: "node"
+  type: "article"
+  title: "Article leaf"
+  status: 1
+  body:
+  - format: "full_html"
+    value: 'my article body'
+  menu:
+    menu_name: "main"
+    title: "Article leaf"
+    description: "Leaf article part of more complicated menu structure"
+    weight: 0
+    parent:
+    - '#process':
+        callback: 'menu_link_content'
+        args:
+        - menu_name: "main"
+          title: "Article root"

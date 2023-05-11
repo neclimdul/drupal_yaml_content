@@ -35,7 +35,11 @@ class File extends YamlContentProcessBase implements YamlContentProcessInterface
     // TODO path not set.
     $output = file_get_contents($context->getContentLoader()->getContentPath() . $directory . $filename);
     if ($output !== FALSE) {
-      $destination = 'public://';
+      // Lookup the field scheme.
+      $scheme = $context->getField()->getSetting('uri_scheme');
+      $scheme = $scheme ?: 'public';
+      $destination = $scheme . '://';
+
       // Look-up the field's directory configuation.
       if ($directory = $context->getField()->getSetting('file_directory')) {
         $directory = trim($directory, '/');
@@ -50,7 +54,7 @@ class File extends YamlContentProcessBase implements YamlContentProcessInterface
         ->prepareDirectory($destination, FileSystemInterface::CREATE_DIRECTORY);
 
       // Save the file data or return an existing file.
-      $file = file_save_data($output, $destination . $filename, FileSystemInterface::EXISTS_REPLACE);
+      $file = \Drupal::service('file.repository')->writeData($output, $destination . $filename, FileSystemInterface::EXISTS_REPLACE);
 
       // Use the newly created file id as the value.
       $field_data['target_id'] = $file->id();

@@ -291,7 +291,7 @@ class ContentLoader implements ContentLoaderInterface {
 
     // Dispatch the event notification.
     $content_parsed_event = new ContentParsedEvent($this, $this->contentFile, $this->parsedContent);
-    $this->getEventDispatcher()->dispatch(YamlContentEvents::CONTENT_PARSED, $content_parsed_event);
+    $this->getEventDispatcher()->dispatch($content_parsed_event, YamlContentEvents::CONTENT_PARSED);
 
     return $this->parsedContent;
   }
@@ -307,19 +307,7 @@ class ContentLoader implements ContentLoaderInterface {
 
     // Create each entity defined in the yml content.
     foreach ($content_data as $content_item) {
-      $entity = $this->buildEntity($content_item['entity'], $content_item);
-
-      // Dispatch the pre-save event.
-      $entity_pre_save_event = new EntityPreSaveEvent($this, $entity, $content_item);
-      $this->getEventDispatcher()->dispatch(YamlContentEvents::ENTITY_PRE_SAVE, $entity_pre_save_event);
-
-      $entity->save();
-
-      // Dispatch the post-save event.
-      $entity_post_save_event = new EntityPostSaveEvent($this, $entity, $content_item);
-      $this->getEventDispatcher()->dispatch(YamlContentEvents::ENTITY_POST_SAVE, $entity_post_save_event);
-
-      $loaded_content[] = $entity;
+      $loaded_content[] = $this->saveEntity($content_item);
     }
 
     // Trigger a hook for post-import processing.
@@ -330,28 +318,51 @@ class ContentLoader implements ContentLoaderInterface {
   }
 
   /**
-   * Build an entity from the provided content data.
-   *
-   * @param string $entity_type
-   *   The entity type.
-   * @param array $content_data
-   *   The array of content data to be parsed.
-   *
-   * @return \Drupal\Core\Entity\EntityInterface
-   *   The created entity from the parsed content data.
-   *
-   * @throws \Drupal\Core\Entity\EntityStorageException
+   * {@inheritdoc}
    */
-  public function buildEntity($entity_type, array $content_data) {
+  public function saveEntity(array $content_item) {
+    // Separate out entity type so we can use it discreetly going forward.
+    $entity_type = $content_item['entity'];
+    unset($content_item['entity']);
+
+    // Parse properties for creation and fields for processing.
+    $attributes = $this->getContentAttributes($entity_type, $content_item);
+
+    // Build an entity from the supplied values.
+    $entity = $this->buildEntity($entity_type, $content_item, $attributes);
+
+    // Dispatch the pre-save event.
+    $entity_pre_save_event = new EntityPreSaveEvent($this, $entity, $content_item);
+    $this->getEventDispatcher()->dispatch($entity_pre_save_event, YamlContentEvents::ENTITY_PRE_SAVE);
+
+    $entity->save();
+
+    // Dispatch the post-save event.
+    $entity_post_save_event = new EntityPostSaveEvent($this, $entity, $content_item);
+    $this->getEventDispatcher()->dispatch($entity_post_save_event, YamlContentEvents::ENTITY_POST_SAVE);
+
+    return $entity;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildEntity($entity_type, array $content_data, array $attributes = array()) {
+
+    // Temporary backwards compatibility. Taking just a list of attributes is a
+    // API break but a much cleaner approach.
+    if (empty($attributes)) {
+      $entity_type = $content_data['entity'];
+      unset($content_data['entity']);
+      $attributes = $this->getContentAttributes($entity_type, $content_data);
+    }
+
     // Load entity type definition.
     $entity_definition = $this->getEntityTypeDefinition($entity_type);
 
     // Dispatch the entity import event.
     $entity_import_event = new EntityImportEvent($this, $entity_definition, $content_data);
-    $this->getEventDispatcher()->dispatch(YamlContentEvents::IMPORT_ENTITY, $entity_import_event);
-
-    // Parse properties for creation and fields for processing.
-    $attributes = $this->getContentAttributes($entity_type, $content_data);
+    $this->getEventDispatcher()->dispatch($entity_import_event, YamlContentEvents::IMPORT_ENTITY);
 
     // If it is a 'user' entity, append a timestamp to make the username unique.
     // @todo Move this into an entity-specific processor.
@@ -360,7 +371,7 @@ class ContentLoader implements ContentLoaderInterface {
     }
 
     // Create our entity with basic data.
-    $entity = $this->createEntity($entity_type, $content_data);
+    $entity = $this->createEntity($entity_type, $attributes['property']);
 
     // Populate fields.
     if ($entity instanceof FieldableEntityInterface) {
@@ -368,6 +379,38 @@ class ContentLoader implements ContentLoaderInterface {
     }
 
     return $entity;
+  }
+
+  /**
+   * Process an entity attribute.
+   *
+   * @param mixed $attribute_data
+   *   Any value can be passed but only arrays need processing.
+   * @param object|null $field
+   *   (optional) The entity field object.
+   *
+   * @throws \Drupal\Core\Entity\EntityStorageException
+   * @throws \Drupal\Core\TypedData\Exception\MissingDataException
+   */
+  protected function processAttributeData(&$attribute_data, $field = NULL) {
+
+    // If this isn't an array there isn't anything to do.
+    if (!is_array($attribute_data)) {
+      return;
+    }
+
+    // If there are dependencies handle them before we start processing.
+    if (isset($attribute_data['#process']['dependency'])) {
+      $this->processDependency($attribute_data['#process']['dependency']);
+    }
+
+    // Build a context processing can use to get processing and field properties.
+    $context = new ProcessingContext();
+    $field && $context->setField($field);
+    $context->setContentLoader($this);
+
+    // Preprocess the field data.
+    $this->getProcessManager()->preprocessFieldData($context, $attribute_data);
   }
 
   /**
@@ -452,7 +495,7 @@ class ContentLoader implements ContentLoaderInterface {
 
           // Dispatch field import event prior to populating fields.
           $field_import_event = new FieldImportEvent($this, $entity, $field_instance, $field_data);
-          $this->getEventDispatcher()->dispatch(YamlContentEvents::IMPORT_FIELD, $field_import_event);
+          $this->getEventDispatcher()->dispatch($field_import_event, YamlContentEvents::IMPORT_FIELD);
 
           $this->populateField($field_instance, $field_data);
         }
@@ -530,37 +573,19 @@ class ContentLoader implements ContentLoaderInterface {
     }
 
     // Iterate over each field data value and process it.
-    foreach ($field_data as &$item_data) {
-      if (isset($field_data['#process']['dependency'])) {
-        $dependency = $field_data['#process']['dependency'];
-        $this->processDependency($dependency);
-      }
-      // Preprocess the field data.
-      $context = new ProcessingContext();
-      $context->setField($field);
-      $context->setContentLoader($this);
-      $this->getProcessManager()->preprocessFieldData($context, $item_data);
-
-      // Check if the field is a reference field. If so, build the entity ref.
-      $is_reference = isset($item_data['entity']);
-      if ($is_reference) {
-        // Build the reference entity.
-        $field_item = $this->buildEntity($item_data['entity'], $item_data);
-      }
-      else {
-        $field_item = $item_data;
-      }
+    foreach ($field_data as $item_data) {
+      $this->processAttributeData($item_data, $field);
 
       // If the cardinality is set to 1, set the field value directly.
       if ($cardinality == 1) {
-        $field->setValue($field_item);
+        $field->setValue($item_data);
 
         // @todo Warn if additional item data is available for population.
         break;
       }
       else {
         // Otherwise, append the item to the multi-value field.
-        $field->appendItem($field_item);
+        $field->appendItem($item_data);
       }
     }
   }
@@ -600,9 +625,9 @@ class ContentLoader implements ContentLoaderInterface {
       case 'paragraph':
         break;
 
-      case 'media':
-        // @todo Add special handling to check file name or path.
-        break;
+      // case 'media':
+      //  // @todo Add special handling to check file name or path.
+      //  break;
 
       default:
         // Load entity type handler.
@@ -615,7 +640,9 @@ class ContentLoader implements ContentLoaderInterface {
             $query->condition($key, $value);
           }
         }
-        $entity_ids = $query->execute();
+        $entity_ids = $query
+          ->accessCheck(TRUE)
+          ->execute();
 
         if ($entity_ids) {
           $entity_id = array_shift($entity_ids);
